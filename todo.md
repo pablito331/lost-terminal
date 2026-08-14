@@ -10,6 +10,9 @@
 - [ ] Testar autenticação, permissões, corrupção, `FSCK`, `RECOVER`, `RUN`, `SUDO`, BIOS, reboot, montagem e persistência local.
 - [ ] Verificar restauração do snapshot após recarregar a página e comportamento em viewport móvel.
 - [ ] Corrigir falhas encontradas e repetir as validações afetadas.
+- [ ] Garantir uma primeira cadeia de acesso inteiramente legível por GUEST, com pista, credencial, alvo e elevação verificáveis antes de qualquer arquivo CREW.
+- [ ] Auditar cada credencial contextual para que sua fonte tenha clearance igual ou inferior ao nível exigido para descobri-la, evitando bloqueios circulares de progressão.
+- [ ] Criar validação automatizada que simule o primeiro acesso GUEST e rejeite credenciais cuja única fonte esteja protegida por CREW, OFFICER ou ROOT.
 - [ ] Catalogar os aplicativos `.PROC` já funcionais e definir quais ficam disponíveis no `/apps` desde o primeiro boot.
 - [ ] Implementar instalação diegética de `.PROC` descobertos nos arquivos pessoais, com verificação de dependências, permissões, integridade e compatibilidade.
 - [ ] Persistir o inventário de aplicativos instalados no snapshot local e reconstruir o diretório `/apps` após reload ou reboot.

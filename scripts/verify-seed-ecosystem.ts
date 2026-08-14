@@ -6,6 +6,7 @@ import { createSeedIndex, resolveFile, validateSeedContinuity } from "../client/
 import { compileSeedScript, runSeedScript } from "../client/src/lib/seedScript";
 
 const index = createSeedIndex();
+const bootstrapCredential = resolveFile(index, "/personal/passenger-014/saved-passwords.SCR");
 const knowledge = index.files.filter((file) => file.extension === ".BOOK");
 const messages = index.files.filter((file) => file.extension === ".MSG");
 const videos = index.files.filter((file) => file.extension === ".VIS" && file.directory === "/media/public");
@@ -29,6 +30,9 @@ const missingLanguages = requiredLanguages.filter((language) => !languages.has(l
 const unresolvedReferences = [...knowledge, ...messages, ...videos].flatMap((file) => file.links.map((link) => ({ source: file.path, target: link.target }))).filter(({ target }) => !resolveFile(index, target));
 
 const failures = [
+  !bootstrapCredential ? "BOOTSTRAP_CREDENTIAL=MISSING" : "",
+  bootstrapCredential?.clearance !== "GUEST" ? `BOOTSTRAP_CLEARANCE=${bootstrapCredential?.clearance ?? "MISSING"}` : "",
+  bootstrapCredential?.payload.kind !== "credential" || bootstrapCredential.payload.username !== "I.CHEN" || bootstrapCredential.payload.secret !== "TIDAL-04" ? "BOOTSTRAP_AUTH=INVALID" : "",
   knowledge.length < 10 ? `BOOK_COUNT=${knowledge.length}` : "",
   messages.length < 5 ? `MSG_COUNT=${messages.length}` : "",
   videos.length < 2 ? `PUBLIC_VIS_COUNT=${videos.length}` : "",
@@ -40,6 +44,8 @@ const failures = [
 ].filter(Boolean);
 
 console.log(`BOOKS=${knowledge.length}`);
+console.log(`BOOTSTRAP_CREDENTIAL=${bootstrapCredential?.path ?? "MISSING"}`);
+console.log(`BOOTSTRAP_CLEARANCE=${bootstrapCredential?.clearance ?? "MISSING"}`);
 console.log(`MESSAGES=${messages.length}`);
 console.log(`PUBLIC_VIS=${videos.length}`);
 console.log(`LANGUAGES=${Array.from(languages).sort().join(",")}`);

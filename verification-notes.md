@@ -165,3 +165,11 @@
 - O conteúdo oficial e o canal `GHOST` agora armazenam IDs canônicos de tripulantes, aceitam grupos operacionais auditáveis e exibem handles/nome ao abrir a mensagem, sem perder a rastreabilidade técnica.
 - O exemplo de reparo Seed Script compilou e executou em runtime mediado, produzindo `REPAIR REQUEST :: SCRUBBER-B` sem contornar autoridade, firmware ou o kernel.
 - Resultado final da auditoria: `SEED_ECOSYSTEM_AUDIT=PASS`; `pnpm check` e `pnpm build` também passaram, mantendo apenas o aviso não bloqueante do chunk acima de 500 kB.
+
+## Correção de progressão inicial — credencial GUEST
+
+- O cofre `/personal/passenger-014/saved-passwords.SCR` foi identificado como bloqueio circular: continha a primeira credencial indicada, mas exigia `CREW` para abrir.
+- O arquivo agora representa um cofre de recuperação com ACL órfã de fallback e clearance `GUEST`; os demais cofres pessoais permanecem protegidos por `CREW`.
+- A auditoria determinística confirmou `BOOTSTRAP_CREDENTIAL=/personal/passenger-014/saved-passwords.SCR`, `BOOTSTRAP_CLEARANCE=GUEST` e o par `I.CHEN / TIDAL-04` válido.
+- `pnpm check`, `pnpm build` e `pnpm exec tsx scripts/verify-seed-ecosystem.ts` passaram. Permanece somente o aviso não bloqueante do bundle JavaScript acima de 500 kB.
+- Captura desktop durante o POST confirmou que a superfície do terminal continua íntegra após a alteração do VFS.
