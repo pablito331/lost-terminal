@@ -1,3 +1,7 @@
+/**
+ * Style reminder: Seed OS is a brutalist technical terminal, not a dashboard.
+ * Keep the route shell dark, dense, keyboard-first, and visibly industrial.
+ */
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -26,10 +30,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Router />
