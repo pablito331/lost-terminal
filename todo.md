@@ -2,6 +2,16 @@
 
 ## Próxima iteração
 
+- [x] Definir um snapshot versionado da sessão com cwd, histórico, autoridade, autenticações, tentativas, arquivos recuperados, firmware, volumes, serviços, telemetria e áudio.
+- [x] Implementar IndexedDB como armazenamento principal do progresso local, sem depender do cache HTTP do navegador.
+- [x] Adicionar fallback mínimo em `localStorage` para recuperar o último snapshot válido quando IndexedDB estiver indisponível.
+- [x] Salvar silenciosamente após cada comando que alterar estado, incluindo AUTH, USE, RECOVER, RUN, REBOOT, BIOS, NVRAM, MOUNT, BOOT e áudio.
+- [x] Restaurar a sessão automaticamente ao abrir o Seed OS, sem tela de login, modal, tutorial ou mensagem externa de carregamento.
+- [x] Versionar snapshots e ignorar dados incompatíveis ou corrompidos sem quebrar o boot do sistema.
+- [ ] Criar exportação e importação técnica de sessão para recuperação manual quando o jogador limpar dados do navegador.
+- [ ] Não armazenar fontes de áudio grandes no snapshot; persistir apenas caminho, estado, posição e metadados necessários.
+- [ ] Documentar que limpar dados do site, usar navegação privada ou trocar de navegador pode apagar o progresso local.
+- [ ] Testar fechamento da aba, reinicialização, falha de escrita, restauração e migração entre versões do Seed OS.
 - [ ] Criar um registro de aplicações com ID, versão, extensão, tipo, entrypoint, permissões, dependências, dispositivos e capacidades.
 - [ ] Separar arquivos executáveis `.PROC` de processos ativos, com PID, estado, memória, portas, arquivos abertos e dispositivo de saída.
 - [ ] Definir APIs internas para VFS, áudio, tradução, input, relógio, telemetria, permissões e estado da nave.

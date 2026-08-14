@@ -5,6 +5,7 @@
  */
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createSeedIndex, FilePayload, SeedFile, SeedIndex, listDirectory, normalizePath, resolveFile } from "@/lib/seedData";
+import { loadSeedSession, saveSeedSession } from "@/lib/seedPersistence";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
@@ -12,6 +13,7 @@ type BootState = "RUNNING" | "HALTED" | "DIAGNOSTIC" | "SAFE_MODE" | "RECOVERY" 
 type FirmwareFlags = { maintenancePort: boolean; ghostBus: boolean; cryo601: boolean; rootWrite: boolean; hiddenVolume: boolean; debugConsole: boolean };
 type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "SOURCE_MISSING"; position: number };
 type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState };
+type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
 const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0 } };
 
@@ -110,6 +112,49 @@ function openLines(file: SeedFile, index: SeedIndex, runtime: RuntimeState): Ter
 }
 
 function fileLine(file: SeedFile) { return `${file.name.padEnd(28)} ${file.extension.padEnd(6)} ${file.layer.padEnd(9)} ${file.language.padEnd(7)} ${file.size}`; }
+
+function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): SessionSnapshot | null {
+  if (!snapshot || snapshot.version !== 1 || !snapshot.runtime || typeof snapshot.runtime !== "object") return null;
+  const cwd = typeof snapshot.cwd === "string" && index.directories.includes(snapshot.cwd) ? snapshot.cwd : "/";
+  const focusPath = typeof snapshot.focusPath === "string" && index.fileMap.has(snapshot.focusPath.toLowerCase()) ? snapshot.focusPath : "/BOOT.ATA";
+  const runtime = snapshot.runtime;
+  const audioFile = runtime.audio?.path ? index.fileMap.get(runtime.audio.path.toLowerCase()) : undefined;
+  const audioPayload = audioFile?.payload.kind === "audio" ? audioFile.payload : undefined;
+  return {
+    version: 1,
+    savedAt: typeof snapshot.savedAt === "string" ? snapshot.savedAt : new Date().toISOString(),
+    cwd,
+    runtime: {
+      ...initialRuntime,
+      ...runtime,
+      firmware: { ...initialRuntime.firmware, ...(runtime.firmware ?? {}) },
+      nvram: { ...initialRuntime.nvram, ...(runtime.nvram ?? {}) },
+      audio: {
+        ...initialRuntime.audio,
+        ...(runtime.audio ?? {}),
+        source: audioPayload?.mediaSrc,
+        title: runtime.audio?.title ?? audioPayload?.title,
+        artist: runtime.audio?.artist ?? audioPayload?.artist,
+        duration: runtime.audio?.duration ?? audioPayload?.duration,
+      },
+    },
+    history: Array.isArray(snapshot.history) ? snapshot.history.filter((entry): entry is string => typeof entry === "string").slice(-80) : [],
+    focusPath,
+    lines: Array.isArray(snapshot.lines) ? snapshot.lines.slice(-320) : initialLines(),
+  };
+}
+
+function snapshotForStorage(cwd: string, runtime: RuntimeState, history: string[], focusPath: string, lines: TerminalLine[]): SessionSnapshot {
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    cwd,
+    runtime: { ...runtime, audio: { ...runtime.audio, source: undefined } },
+    history: history.slice(-80),
+    focusPath,
+    lines: lines.slice(-320),
+  };
+}
 
 function helpLines(): TerminalLine[] {
   return [
@@ -335,7 +380,22 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [storageReady, setStorageReady] = useState(false);
+  const restoredRef = useRef(false);
+  const pendingSnapshotRef = useRef<SessionSnapshot | null>(null);
   const activeFile = index.fileMap.get(focusPath.toLowerCase());
+
+  useEffect(() => {
+    let alive = true;
+    void loadSeedSession<SessionSnapshot>().then((snapshot) => {
+      if (!alive) return;
+      pendingSnapshotRef.current = restoreSnapshot(snapshot, index);
+      setStorageReady(true);
+    }).catch(() => {
+      if (alive) setStorageReady(true);
+    });
+    return () => { alive = false; };
+  }, [index]);
 
   useEffect(() => {
     if (bootComplete) return;
@@ -364,6 +424,23 @@ export default function Home() {
   }, [bootComplete]);
   useEffect(() => { if (bootComplete) inputRef.current?.focus(); }, [bootComplete]);
   useEffect(() => { outputRef.current?.scrollTo({ top: outputRef.current.scrollHeight }); }, [lines]);
+  useEffect(() => {
+    if (!bootComplete || !storageReady || restoredRef.current) return;
+    const snapshot = pendingSnapshotRef.current;
+    if (snapshot) {
+      setCwd(snapshot.cwd);
+      setRuntime(snapshot.runtime);
+      setHistory(snapshot.history);
+      setFocusPath(snapshot.focusPath);
+      setLines(snapshot.lines);
+    }
+    restoredRef.current = true;
+  }, [bootComplete, storageReady]);
+  useEffect(() => {
+    if (!bootComplete || !storageReady || !restoredRef.current) return;
+    const snapshot = snapshotForStorage(cwd, runtime, history, focusPath, lines);
+    void saveSeedSession(snapshot);
+  }, [bootComplete, storageReady, cwd, runtime, history, focusPath, lines]);
   useEffect(() => {
     const element = audioRef.current;
     if (!element) return;
