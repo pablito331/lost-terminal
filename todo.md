@@ -2,6 +2,14 @@
 
 ## Próxima iteração
 
+- [ ] Executar `pnpm check` e build de produção.
+- [ ] Inspecionar logs de desenvolvimento, console do navegador e requisições após boot e interação.
+- [ ] Verificar a sequência de boot, bloqueio do prompt e entrada no fallback shell.
+- [ ] Testar `PWD`, `LS`, `DIR`, `CD`, `CAT`, `TYPE`, `OPEN`, `TREE`, `FIND` e `SEARCH` com caminhos válidos e inválidos.
+- [ ] Testar `SEED`, `POWER`, `GENERATORS`, `LIFE`, `SYSLOG`, `NOTICES` e `REPAIR`, verificando consumo e avisos discretos.
+- [ ] Testar autenticação, permissões, corrupção, `FSCK`, `RECOVER`, `RUN`, `SUDO`, BIOS, reboot, montagem e persistência local.
+- [ ] Verificar restauração do snapshot após recarregar a página e comportamento em viewport móvel.
+- [ ] Corrigir falhas encontradas e repetir as validações afetadas.
 - [x] Definir um relógio de simulação e taxas de consumo para energia, oxigênio, memória, calor, casco e rede.
 - [x] Modelar geradores, barramentos, relés, baterias, distribuição e serviços de suporte à vida no runtime.
 - [x] Criar documentos técnicos coerentes para geradores, filtros de O2, circuitos, falhas e procedimentos de manutenção.

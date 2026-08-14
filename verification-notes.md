@@ -1,0 +1,128 @@
+# Verificação atual do Seed OS
+
+## Boot observado
+
+- A página abre em `SEED OS // LOCAL CONSOLE`.
+- O estado inicial aparece como `FIRMWARE // COLD START`.
+- O prompt permanece bloqueado durante o POST, com `BUS: LOCKED` e `STDIN OFFLINE`.
+- A sequência já exibiu inicialização de hardware, teste de memória `65536 MB / PASS`, montagem read-only de `/SHIP`, setores ruins quarentenados e a árvore ANSI da Seed Corp.
+- O boot estava em `PHASE: 03/06` e `POST 033%` no segundo registro; a transição ao fallback ainda precisa ser observada até o fim.
+- A tela mantém o terminal como superfície única, sem painel externo ou referência visível ao nome do produto.
+
+## Shell observado
+
+- O POST terminou corretamente e entrou em `SEED FIRMWARE // FALLBACK SHELL`.
+- O shell exibiu `PASSENGERS: 600`, `FAMILY INDEX: 150`, `LANGUAGE TABLE: 08`, `O2: 14%`, `NEURAL_BUFFER_CORRUPTED` e `capsule 601 has no owner`.
+- O prompt `guest@seed:/$` ficou disponível e aceitou `pwd`, retornando `/`.
+- O consumo já está ativo: o cabeçalho passou de `O2: 14%` para `O2: 13.82%` após a operação.
+
+## Navegação básica
+
+- `pwd` retornou `/` corretamente.
+- `ls` listou diretórios e o arquivo `BOOT.ATA` no diretório raiz.
+- `cd engineering` retornou `mounted /engineering` e atualizou o prompt para `guest@seed:/engineering$`.
+- O O2 caiu progressivamente durante as operações (`13.82%` → `13.64%` → `13.46%`), confirmando que o tick de consumo está sendo aplicado ao shell.
+
+## Engenharia
+
+- `ls` em `/engineering` listou `loop-02/`.
+- `cd loop-02` montou `/engineering/loop-02` e atualizou corretamente o prompt.
+- O O2 continuou caindo (`13.28%` → `13.10%`) durante a navegação aninhada.
+
+## Arquivos e permissões
+
+- `ls` em `/engineering/loop-02` listou `thermal.VIS` com metadados de sistema.
+- `cat thermal.VIS` abriu o renderizador correto para `.VIS`, exibiu metadados técnicos e recusou o payload com `ACCESS :: DENIED / required CREW` em sessão GUEST.
+- A recusa foi técnica e diegética; não apareceu uma dica externa nem uma instrução narrativa.
+- O O2 chegou a `12.74%` após a abertura do arquivo, confirmando consumo também em operações protegidas.
+
+## Telemetria de energia
+
+- `seed` retornou energia, O2, casco, memória, rede, autoridade, geradores online e evento de falha sem usar banner externo.
+- `power` exibiu a distribuição detalhada: `GEN-01 ONLINE`, `GEN-02 FAULT`, `GEN-03 STANDBY`, além dos barramentos MAIN, AUX e LIFE.
+- A falha técnica está legível e operacionalmente acionável: `GEN-02` apresenta `controller checksum mismatch`; o shell não informa uma solução pronta.
+- O O2 continuou caindo até `12.38%` durante as consultas.
+
+## Suporte à vida e geradores
+
+- `life` retornou `SCRUBBER-A :: ONLINE`, `SCRUBBER-B :: FAULT`, `CYCLE :: DEGRADED` e `FORECAST :: 14%`.
+- `generators` repetiu a distribuição de energia e manteve `GEN-02 FAULT` com `controller checksum mismatch`, confirmando que o estado da falha é estável entre comandos.
+- O barramento LIFE permanece offline mesmo com `GEN-03` em standby, criando uma cadeia operacional observável sem instrução explícita.
+- O2 chegou a `12.02%` após esses comandos; o consumo continua aplicado inclusive a consultas técnicas.
+
+## Shell e avisos técnicos
+
+- `help` lista os aliases e comandos planejados, incluindo `O2`, `NOTICES`, `REPAIR`, firmware, autenticação, arquivos, áudio e execução de programas.
+- `syslog` retornou quatro avisos sem textos narrativos: `LIFE.O2.DRIFT`, `PWR.GEN.02.FAULT`, `MEM.SECTOR.03.BAD` e `PWR.GEN.FAULT_PRESENT`.
+- O buffer está coerente com as leituras de `power`, `life` e `seed`; não há confirmação externa nem objetivo imposto ao operador.
+- O2 chegou a `11.66%` durante a consulta.
+
+## O2 e reparo sem firmware
+
+- O alias `o2` retornou a mesma leitura estrutural de `life`, confirmando compatibilidade do comando híbrido.
+- `repair gen-02` em GUEST falhou de forma técnica e consistente: `maintenance channel unavailable` e `device: /maintenance // firmware port not mounted`.
+- O reparo não exibiu instruções de objetivo, tutorial ou dica narrativa; a pré-condição exige investigação/uso do firmware.
+- O2 chegou a `11.30%` após a tentativa.
+
+## Busca global e manifesto de boot
+
+- `find passenger-014` retornou `12 match(es)`, incluindo logs de acesso, ata de comando, memo, diário, documento, foto, playlist, arquivo corporativo, biometria, memory-video, seed-tool e saved-passwords.
+- A busca confirma a interligação entre arquivos pessoais e corporativos do passageiro, com idioma pessoal `fr-FR` e camada `SEED-OPS` nos registros corporativos.
+- `open /BOOT.ATA` abriu o arquivo `.ATA` em sessão GUEST e exibiu o manifesto de inicialização: memory check PASS, VFS READ_ONLY, passengers 001–600, capsule 601 UNREGISTERED, `Neural_Buffer_Corrupted` e `FALLBACK MODE: GUEST`.
+- O manifesto expõe links internos para `/cryo/capsule-601/scan.VIS`, `/personal/passenger-001/diary.SCR` e `/corporate/passenger-001/personnel.SCR`.
+- O2 chegou a `10.94%` após os dois testes.
+
+## Passageiro e documentos corporativos
+
+- `passenger ilyin` retornou `Mara Ilyin // M.Ilyin`, ID `passenger-344`, família `FAMILY-086`, idioma `ja-JP`, função `Neural Systems Analyst`, departamento `SCIENCE` e status `FLAGGED`.
+- O registro nominal mostrou os caminhos pessoais e corporativos de `passenger-344`, confirmando links entre identidade, diários, documento, foto, playlist, personnel e biometria.
+- `docs access_log` retornou `DOCUMENT INDEX :: 34 RECORD(S)` e listou registros `.SCR` em `/logs/access/`, incluindo passageiros sinalizados e a sequência de acessos da nave.
+- O2 chegou a `10.58%` depois dos comandos.
+
+## Firmware BIOS
+
+- `reboot bios` entrou no estado `BIOS SHELL` sem apagar o histórico visível e exibiu `POST sequence 0001`, `BOOT STATE :: BIOS` e `NVRAM ACCESS AVAILABLE`.
+- `bios` mostrou `SEED FIRMWARE / BIOS 0.9.1` com `BOOT_TARGET :: FALLBACK` e flags `MAINTENANCEPORT`, `GHOSTBUS`, `CRYO601`, `ROOTWRITE`, `HIDDENVOLUME` e `DEBUGCONSOLE` inicialmente `OFF`.
+- A transição de shell para firmware é observável e não usa tela externa, tutorial ou confirmação narrativa.
+
+## Boot após alteração de firmware
+
+- `bios set maintenance_port on` aceitou a escrita e retornou `NVRAM WRITE :: MAINTENANCE_PORT=ON`.
+- `boot` voltou ao `FALLBACK` com `BOOT TARGET :: FALLBACK` e `kernel state :: RUNNING`, mantendo o diretório `/engineering/loop-02`.
+- O2 caiu de `10.58%` para `10.40%` durante esse ciclo, indicando que o retorno ao shell retoma o consumo por comando.
+
+## Correção aplicada
+
+- O cabeçalho foi alterado de `String(runtime.oxygen).padStart(2, "0")` para `runtime.oxygen.toFixed(1)`.
+- `pnpm check` concluiu sem erros de TypeScript.
+- `pnpm build` concluiu com sucesso; permanece apenas o aviso não bloqueante de chunk JavaScript acima de 500 kB.
+- Após o hot reload, o cabeçalho mostrou `O2: 10.4%`, eliminando o artefato `10.400000000000006%` sem alterar a precisão interna do consumo.
+
+## Persistência após reload
+
+- O reload reiniciou corretamente o POST diegético, com `FIRMWARE // COLD START`, `BUS: LOCKED`, `NO USER SESSION` e bloqueio do prompt.
+- A sequência reapresentou `MEMORY CHECK PASS`, montagem `/SHIP READ_ONLY` e setores ruins quarentenados; a restauração só deve ocorrer após a transição para o fallback.
+- Após a conclusão do POST, a sessão foi restaurada sem tela ou mensagem externa: o cabeçalho voltou a `O2: 10.4%`, o prompt voltou a `guest@seed:/engineering/loop-02$` e o histórico anterior permaneceu visível.
+- O snapshot também preservou o estado de firmware (`MAINTENANCE_PORT=ON` refletido no ciclo anterior), avisos, diretório e arquivos já consultados.
+- Um segundo reload reproduziu o mesmo comportamento: o terminal inicia em `COLD START`, com `POST 017%`, barramento bloqueado e entrada desabilitada durante a inicialização.
+- O segundo boot concluiu em `FALLBACK SHELL`, restaurando novamente `/engineering/loop-02`, o histórico e `O2: 10.4%`.
+- `fsck /BOOT.ATA` retornou `FSCK /BOOT.ATA` e `STATE :: CLEAN`, confirmando a leitura de integridade sem mudar a autoridade GUEST.
+- `use loop_02 tidal-04` retornou `credential accepted :: LOOP_02` e expôs `/engineering/loop-02/thermal.VIS` como alvo.
+- `auth i.chen tidal-04` retornou `auth: session attached :: I.CHEN` e `clearance :: OFFICER`; o prompt e o cabeçalho passaram a identificar a conta autenticada.
+- Com a conta OFFICER, `cat /engineering/loop-02/thermal.VIS` abriu o payload e exibiu telemetria, pulso e links para a ferramenta pessoal.
+- `run /personal/passenger-014/seed-tool.PROC` executou sem erro, retornando `calibrator: handshake accepted`, redução da oscilação do loop 02 e um canal privado visível.
+- Após a execução, `seed` confirmou `NETWORK STABLE`, `AUTHORITY OFFICER`, `1 ship service altered` e `1 credential accepted`; energia e O2 continuaram consumindo por comando.
+- `reboot bios` abriu o console de firmware com `POST sequence 0002`, preservando a identidade I.CHEN e o estado de autoridade.
+- `mount /maintenance` retornou `MOUNT /maintenance :: attached` e listou `/ship /maintenance`.
+- Após `boot`, `repair gen-02` foi aceito: `maintenance procedure accepted :: GEN-02`, `controller checksum :: restored` e `generator state :: ONLINE`.
+- `power` confirmou `GEN-02 ONLINE 62% 26kW :: AUX`; o barramento AUX voltou a `STABLE`, enquanto LIFE permaneceu OFFLINE por depender do ciclo de suporte à vida.
+- `repair scrubber-b` foi aceito e `life` confirmou `SCRUBBER-A :: ONLINE`, `SCRUBBER-B :: ONLINE`, `CYCLE :: RUNNING`; o forecast permaneceu em 14% por ser uma leitura conservadora do sistema.
+- `seed` confirmou `GEN 2/3 ONLINE`, `LIFE RUNNING`, `NETWORK STABLE`, `1 ship service(s) altered`, `1 credential(s) accepted` e duas volumes montados.
+- `cat /personal/passenger-014/diary.SCR` abriu o diário em `fr-FR`, exibindo owner Ivo Chen, família 004 e texto pessoal sem tradução automática.
+- `cat /personal/passenger-014/playlist.MUS` abriu o contêiner musical em `fr-FR`, com duração `03:41`, codec `SEED-AUDIO/2`, título `Bernard / personal sequence` e artista Ivo Chen.
+- `play /personal/passenger-014/playlist.MUS` aceitou o contêiner e anexou `/dev/audio0`, mas retornou `SOURCE :: NOT MOUNTED / metadata only`; `audio` confirmou `STATE :: SOURCE_MISSING` com arquivo e título preservados. Isso é esperado para a fase sem mídia binária fornecida.
+- O reload iniciado após os reparos reiniciou corretamente em `COLD START`, com `BUS: LOCKED`, `PHASE 01/06` e POST sem aceitar comandos; as fases seguintes exibiram a montagem READ_ONLY, setores ruins quarentenados e a árvore ANSI da Seed Corp, confirmando o boot progressivo persistente.
+- Após o POST, o shell restaurou `/engineering/loop-02`, o cabeçalho `I.CHEN / RUNNING SHELL`, O2 `9.3%` e o histórico anterior, sem tela intermediária de restauração.
+- `whoami` pós-reload confirmou `I.CHEN // identity hash attached // clearance OFFICER`; `seed` confirmou `POWER 24.2%`, `O2 9.4%`, `NETWORK STABLE`, `GEN 2/3 ONLINE`, `LIFE RUNNING`, `1 ship service(s) altered`, `1 credential(s) accepted` e `2 volume(s)`. A diferença entre 9.3% no cabeçalho inicial e 9.4% após o comando corresponde ao tick normal de consumo/produção durante a execução.
+- Screenshot responsivo em `390x844` mostrou o POST em tela inteira, cabeçalho e rodapé legíveis, barra de progresso dentro da largura disponível e nenhum overflow horizontal visível.
+- `pnpm check` e `pnpm build` passaram após a correção do O2 e dos testes de sistemas. O build mantém apenas o aviso não bloqueante de chunk JavaScript acima de 500 kB. A inspeção do console encontrou somente mensagens históricas de falha de HMR de iterações anteriores; não houve erro novo durante a bateria final.

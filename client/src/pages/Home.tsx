@@ -516,7 +516,7 @@ export default function Home() {
   }
 
   return <main className="terminal-app" onClick={() => inputRef.current?.focus()}>
-    <header className="terminal-header"><div className="brand-lockup"><span className="brand-glyph">✣</span><div><strong>SEED OS</strong><span>SEED FIRMWARE // FALLBACK SHELL</span></div></div><div className="header-readout"><span>VFS: <b>READ_ONLY</b></span><span>PASSENGERS: <b>600</b></span><span>O2: <b className="danger">{String(runtime.oxygen).padStart(2, "0")}%</b></span></div></header>
+    <header className="terminal-header"><div className="brand-lockup"><span className="brand-glyph">✣</span><div><strong>SEED OS</strong><span>SEED FIRMWARE // FALLBACK SHELL</span></div></div><div className="header-readout"><span>VFS: <b>READ_ONLY</b></span><span>PASSENGERS: <b>600</b></span><span>O2: <b className="danger">{runtime.oxygen.toFixed(1)}%</b></span></div></header>
     <div className="terminal-warning"><span>● {runtime.authenticatedUsers.at(-1) ?? "GUEST SESSION"} / {runtime.boot} SHELL</span><span className="warning-text">! NEURAL_BUFFER_CORRUPTED</span><span>FAMILY INDEX: 150 / LANGUAGE TABLE: 08</span></div>
     <section className="terminal-window">
       <div className="terminal-title"><span>SEED COMMAND INTERPRETER</span><span>PID 0001 // LOCAL EXECUTION</span></div>
