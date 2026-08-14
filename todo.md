@@ -1,0 +1,75 @@
+# Lost Terminal — Revisão multilíngue e manifesto de 600 passageiros
+
+## Próxima iteração
+
+- [x] Criar uma bíblia de continuidade com datas relativas, eventos principais, versões do boot, estado da nave, responsáveis e consequências.
+- [x] Validar que os 600 passageiros, 150 famílias, nacionalidades, idiomas, cargos, departamentos e cápsulas não se contradigam.
+- [x] Validar que cada personagem citado em diário, áudio, foto, vídeo, ata, advertência, memorando ou log exista no manifesto.
+- [x] Validar que cada caminho apontado por `links`, credencial, ferramenta, programa ou registro exista no índice do VFS.
+- [x] Manter três perspectivas distinguíveis: voz pessoal no idioma materno, registro corporativo em SEED-OPS e saída técnica do sistema.
+- [x] Criar uma cronologia única para boot, apagão, cápsula 601, Neural Buffer, reuniões, advertências, acessos, corrupção e reinicializações.
+- [ ] Fazer contradições nascerem de versões, permissões, apagamentos e interesses de personagens, nunca de erro acidental de cadastro.
+- [ ] Vincular cada senha, programa, corrupção e flag de firmware a um evento, pessoa, departamento e consequência verificável.
+- [ ] Preservar diferenças culturais e linguísticas nas vozes, nomes, relações familiares e formas de registrar intimidade ou autoridade.
+- [x] Criar uma validação automática de órfãos, links quebrados, IDs inexistentes, idiomas inválidos e eventos fora da cronologia.
+- [ ] Revisar o terminal para que nenhuma saída contradiga o estado real do VFS, da sessão, da BIOS ou da nave.
+- [x] Modelar estados de boot `RUNNING`, `HALTED`, `DIAGNOSTIC`, `SAFE_MODE`, `RECOVERY` e `BIOS`.
+- [x] Criar comandos diegéticos para `REBOOT`, `SHUTDOWN`, `BIOS`, `BOOT`, `MOUNT`, `UMOUNT` e `NVRAM`.
+- [x] Definir a sequência de hardware checks, POST, montagem de volumes e fallback após cada reinicialização.
+- [x] Criar flags de firmware para portas de manutenção, rede, criogenia, suporte de vida, dispositivos externos e volumes protegidos.
+- [x] Permitir que algumas permissões só sejam liberadas alterando flags na BIOS, não por `SUDO` dentro do shell.
+- [x] Criar volumes read-only, volumes ocultos, partições de recuperação e dispositivos que só aparecem em modo diagnóstico.
+- [x] Fazer reboot interromper processos, limpar buffers temporários ou registrar a sessão conforme o modo selecionado.
+- [x] Ligar a BIOS a arquivos corrompidos, chaves de recuperação, contas ROOT e montagem de payloads recuperáveis.
+- [x] Manter o estado de firmware persistente entre comandos e reinicializações dentro da sessão do terminal.
+- [x] Exibir apenas POST, códigos, flags e mensagens técnicas, sem explicar o motivo narrativo de cada desbloqueio.
+- [ ] Modelar camadas de acesso `GUEST`, `CREW`, `OFFICER`, `ROOT` e subpermissões por usuário, departamento, terminal e serviço.
+- [ ] Criar contas de usuários com identificador, nome, hash parcial, senha possível, salt, status, tentativas e terminal de origem.
+- [x] Criar arquivos corrompidos com setores ausentes, caracteres inválidos, timestamps quebrados, payloads truncados e caminhos recuperáveis.
+- [x] Implementar respostas técnicas diferentes para senha válida, senha inválida, usuário inexistente, arquivo bloqueado e arquivo corrompido.
+- [ ] Registrar tentativas de acesso no VFS e permitir bloqueios temporários, alertas silenciosos e mudanças de autoridade.
+- [x] Permitir que o jogador deduza credenciais por documentos, teste combinações e encontre falhas internas sem receber uma solução explícita.
+- [ ] Criar comandos e operações internas que possam explorar permissões mal configuradas, caches, arquivos temporários e processos não assinados.
+- [ ] Fazer `CAT`, `OPEN`, `RUN`, `USE` e `SUDO` respeitarem a camada de acesso e o estado atual da sessão.
+- [ ] Manter consequências persistentes: logs alterados, conta bloqueada, rede degradada, serviço liberado ou autoridade elevada.
+- [x] Garantir que mensagens de intrusão permaneçam técnicas e não usem linguagem de missão, dica, puzzle ou recompensa.
+- [x] Remover termos como “jogo”, “missão”, “pista”, “evidência”, “objetivo”, “progresso” e “quebra-cabeça” de toda saída visível do Seed OS.
+- [x] Não mostrar tutorial, onboarding, lista de objetivos, dicas contextuais, botão de ajuda, marcador de descoberta ou confirmação narrativa de acerto.
+- [ ] Fazer `HELP` exibir apenas uma referência técnica incompleta, como documentação legada de um shell real.
+- [ ] Fazer erros, permissões e resultados de comandos soarem como respostas de sistema, sem explicar a intenção narrativa ou sugerir a próxima ação.
+- [ ] Remover links de interface e textos que chamem relações de “pistas”; referências devem aparecer apenas como caminhos, IDs, timestamps e metadados.
+- [ ] Manter contradições, senhas e relações escondidas em documentos ordinários, sem destacar o que é importante.
+- [x] Fazer programas pessoais parecerem utilitários reais, arquivos corrompidos ou ferramentas específicas de trabalho, sem chamar o jogador para executá-los.
+- [x] Garantir que o terminal não informe quando uma cadeia narrativa foi concluída; apenas o estado do sistema deve mudar.
+- [x] Testar a tela inicial para assegurar que ela parece um sistema recuperado, não uma interface de jogo.
+- [ ] Criar schema documental com `documentType`, `eventTime`, `authorId`, `recipientIds`, `department`, `accessTerminal`, `supersedes` e `links`.
+- [ ] Adicionar logs técnicos do sistema, reinicializações, falhas de subsistemas, alterações de permissões e eventos de suporte à vida.
+- [ ] Adicionar logs de acesso com usuário, terminal, caminho, ação, resultado, horário e origem de sessão.
+- [ ] Criar atas de reunião com participantes, pauta, decisões, dissensos e itens de ação pendentes.
+- [ ] Criar advertências disciplinares com destinatário, emissor, motivo, evidência, status e possível encobrimento.
+- [ ] Criar memorandos enviados com remetente, destinatários, assunto, classificação, anexos e resposta esperada.
+- [ ] Ligar cada documento a passageiros, famílias, departamentos, arquivos pessoais, arquivos corporativos e incidentes relevantes.
+- [ ] Manter uma linha do tempo coerente, incluindo documentos apagados, sobrescritos ou com horários incompatíveis.
+- [ ] Fazer `FIND`/`SEARCH` localizar documentos por tipo, pessoa, terminal, departamento, horário, palavra-chave e contradição.
+- [ ] Usar atas, advertências e memorandos como pistas que abrem caminhos, credenciais ou interpretações alternativas — nunca como texto isolado.
+- [ ] Modelar inventário pessoal por passageiro: diário, documento, foto, vídeo, música, jogo, programa, credencial e ferramenta.
+- [ ] Distinguir arquivos passivos de arquivos executáveis e definir metadados de ação, permissão, dependências e efeitos na nave.
+- [ ] Criar um formato seguro para senhas salvas, tokens, códigos e dicas contextuais, sem expor credenciais fora do fluxo narrativo.
+- [ ] Permitir que programas pessoais sejam abertos com `RUN`, `EXEC`, `START` ou `USE`, retornando minijogos, utilitários ou alterações de estado.
+- [ ] Criar estados persistentes de nave para portas, energia, suporte de vida, rede, criogenia, arquivos e autoridade de acesso.
+- [ ] Ligar cada credencial ou ferramenta a um alvo funcional, como uma porta, painel, subsistema, processo ou terminal corporativo.
+- [ ] Garantir que fotos, vídeos, músicas e documentos também possam conter pistas, relações, localizações, idiomas e senhas descobertas por contexto.
+- [x] Remover a dependência da interface de dashboard: a tela principal deve ser um terminal de tela inteira, com prompt, histórico e saída textual.
+- [x] Definir aliases híbridos Linux/DOS/Seed OS: `ls`/`dir`, `cat`/`type`/`open`, `pwd`/`cd`, `clear`/`cls`, `find`/`search`, `tree`, `whoami`, `seed` e `sudo`.
+- [x] Permitir navegação por teclado como fluxo principal, incluindo histórico de comandos, setas, Tab para completar caminhos e Ctrl/Cmd+L para limpar a tela.
+- [x] Renderizar `.SCR`, `.REC`, `.VIS`, `.HLT`, `.ATA` e `.PROC` como saída textual contextual dentro do terminal, sem cards ou inspector lateral.
+- [ ] Reduzir o manifesto canônico de 700 para 600 passageiros e atualizar todos os contadores, cápsulas e referências de boot.
+- [ ] Criar o schema de nacionalidade, língua materna, idioma operacional da Seed Corp e preferência de tradução por arquivo.
+- [ ] Modelar famílias como grupos navegáveis, com parentesco, dependentes, sobrenomes, cápsulas e vínculos de emergência.
+- [ ] Distribuir passageiros por função: comando, pilotos, navegação, engenharia, saúde, ciência, manutenção, operações, trabalhadores e famílias/colonos.
+- [ ] Gerar arquivos pessoais em idiomas maternos, preservando o texto original e adicionando metadados de idioma, sem substituir a voz de cada personagem por tradução automática.
+- [ ] Manter registros corporativos Seed Corp em idioma operacional comum, ligados aos arquivos pessoais por `ownerId`, `familyId`, `language` e `corporateRecordIds`.
+- [ ] Adicionar filtros e indicadores de idioma, nacionalidade, família e camada `PERSONAL`/`CORPORATE` ao terminal e ao inspetor.
+- [ ] Corrigir links narrativos para garantir que cada arquivo citado exista e que as relações familiares formem uma rede navegável.
+- [ ] Testar os comandos de busca por pessoa, família, idioma, nacionalidade e caminho corporativo.
+- [ ] Validar a nova contagem de arquivos, a tela responsiva e o build antes de salvar o próximo checkpoint.
