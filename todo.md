@@ -2,6 +2,15 @@
 
 ## Próxima iteração
 
+- [x] Definir um relógio de simulação e taxas de consumo para energia, oxigênio, memória, calor, casco e rede.
+- [x] Modelar geradores, barramentos, relés, baterias, distribuição e serviços de suporte à vida no runtime.
+- [x] Criar documentos técnicos coerentes para geradores, filtros de O2, circuitos, falhas e procedimentos de manutenção.
+- [x] Implementar avisos discretos por logs, telemetria, mudanças de prompt e degradação de serviços, sem banners narrativos.
+- [x] Adicionar comandos técnicos para consultar, isolar, reparar, reiniciar e religar subsistemas.
+- [x] Fazer programas `.PROC` e credenciais alterarem o estado da nave apenas quando dependências e permissões forem satisfeitas.
+- [x] Integrar o consumo ao ciclo de sessão e à persistência local, mantendo consequências após reboot e reabertura do navegador.
+- [x] Expandir diretórios operacionais para que a navegação e a leitura de arquivos revelem procedimentos sem objetivos explícitos.
+- [x] Testar consumo, falhas em cascata, recuperação de geradores, suporte à vida e ausência de alertas espalhafatosos.
 - [x] Definir um snapshot versionado da sessão com cwd, histórico, autoridade, autenticações, tentativas, arquivos recuperados, firmware, volumes, serviços, telemetria e áudio.
 - [x] Implementar IndexedDB como armazenamento principal do progresso local, sem depender do cache HTTP do navegador.
 - [x] Adicionar fallback mínimo em `localStorage` para recuperar o último snapshot válido quando IndexedDB estiver indisponível.

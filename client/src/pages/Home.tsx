@@ -6,16 +6,17 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createSeedIndex, FilePayload, SeedFile, SeedIndex, listDirectory, normalizePath, resolveFile } from "@/lib/seedData";
 import { loadSeedSession, saveSeedSession } from "@/lib/seedPersistence";
+import { createInitialShipSystems, repairGenerator, repairLifeSupport, ShipSystemsState, tickShipSystems } from "@/lib/shipSystems";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
 type BootState = "RUNNING" | "HALTED" | "DIAGNOSTIC" | "SAFE_MODE" | "RECOVERY" | "BIOS";
 type FirmwareFlags = { maintenancePort: boolean; ghostBus: boolean; cryo601: boolean; rootWrite: boolean; hiddenVolume: boolean; debugConsole: boolean };
 type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "SOURCE_MISSING"; position: number };
-type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState };
+type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
 type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
-const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0 } };
+const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0 }, systems: createInitialShipSystems() };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -129,6 +130,13 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
       ...runtime,
       firmware: { ...initialRuntime.firmware, ...(runtime.firmware ?? {}) },
       nvram: { ...initialRuntime.nvram, ...(runtime.nvram ?? {}) },
+      systems: {
+        ...initialRuntime.systems,
+        ...(runtime.systems ?? {}),
+        generators: runtime.systems?.generators ?? initialRuntime.systems.generators,
+        buses: runtime.systems?.buses ?? initialRuntime.systems.buses,
+        lifeSupport: { ...initialRuntime.systems.lifeSupport, ...(runtime.systems?.lifeSupport ?? {}) },
+      },
       audio: {
         ...initialRuntime.audio,
         ...(runtime.audio ?? {}),
@@ -154,6 +162,11 @@ function snapshotForStorage(cwd: string, runtime: RuntimeState, history: string[
     focusPath,
     lines: lines.slice(-320),
   };
+}
+
+function tickRuntime(runtime: RuntimeState): RuntimeState {
+  const tick = tickShipSystems(runtime.systems, { activeServices: runtime.services.length, audioPlaying: runtime.audio.status === "PLAYING", boot: runtime.boot });
+  return { ...runtime, energy: Math.max(0, Math.min(100, runtime.energy + tick.energyDelta)), oxygen: Math.max(0, Math.min(100, runtime.oxygen + tick.oxygenDelta)), network: tick.network, systems: tick.systems };
 }
 
 function helpLines(): TerminalLine[] {
@@ -183,6 +196,10 @@ function helpLines(): TerminalLine[] {
     { text: "AUDIO / PLAYER        inspect audio process and device state", tone: "output" },
     { text: "RUN / EXEC / START    execute a .PROC program", tone: "amber" },
     { text: "SEED / STATUS         read live ship telemetry", tone: "output" },
+    { text: "POWER / GENERATORS    inspect generator and bus state", tone: "output" },
+    { text: "LIFE / O2             inspect life-support state", tone: "output" },
+    { text: "SYSLOG / NOTICES      read buffered system notices", tone: "output" },
+    { text: "REPAIR <target>       apply a maintenance procedure", tone: "amber" },
     { text: "WHOAMI / SUDO         inspect or request authority", tone: "output" },
     { text: "CLEAR / CLS            clear terminal output", tone: "output" },
     { text: "", tone: "dim" },
@@ -196,11 +213,14 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
   const normalized = command.toLowerCase();
   const arg = args.join(" ");
   const promptLine: TerminalLine = { text: prompt(cwd, input, runtime), tone: "prompt" };
-  const result = (lines: TerminalLine[], extra: Partial<{ nextCwd: string; nextRuntime: RuntimeState; focus: string }> = {}) => ({ nextCwd: extra.nextCwd ?? cwd, lines: [promptLine, ...lines], ...extra });
+  const result = (lines: TerminalLine[], extra: Partial<{ nextCwd: string; nextRuntime: RuntimeState; focus: string }> = {}) => {
+    const baseRuntime = extra.nextRuntime ?? runtime;
+    return { nextCwd: extra.nextCwd ?? cwd, lines: [promptLine, ...lines], ...extra, nextRuntime: tickRuntime(baseRuntime) };
+  };
   if (!input) return result([]);
   if (["help", "?"].includes(normalized)) return result(helpLines());
   if (["clear", "cls"].includes(normalized)) return { nextCwd: cwd, lines: [] };
-  const firmwareCommands = ["help", "?", "clear", "cls", "reboot", "bios", "nvram", "mount", "umount", "boot", "fsck", "check", "recover", "repair", "seed", "status", "whoami", "pwd"];
+  const firmwareCommands = ["help", "?", "clear", "cls", "reboot", "bios", "nvram", "mount", "umount", "boot", "fsck", "check", "recover", "repair", "seed", "status", "power", "generators", "life", "o2", "syslog", "notices", "whoami", "pwd"];
   if (runtime.boot !== "RUNNING" && !firmwareCommands.includes(normalized)) return result([{ text: `shell: ${runtime.boot.toLowerCase()} state :: command bus unavailable`, tone: "error" }, { text: "firmware commands only", tone: "dim" }]);
   if (["pwd"].includes(normalized)) return result([{ text: cwd, tone: "output" }]);
   if (normalized === "reboot") {
@@ -251,7 +271,22 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
     return result([{ text: `${normalized.toUpperCase()} ${target} :: ${normalized === "mount" ? "attached" : "detached"}`, tone: "system" }, { text: `volumes :: ${mounted.join(" ")}`, tone: "output" }], { nextRuntime: { ...runtime, mountedVolumes: mounted } });
   }
   if (["whoami"].includes(normalized)) { const user = runtime.authenticatedUsers.at(-1) ?? "GUEST"; return result([{ text: `${user} // identity hash ${user === "GUEST" ? "unresolved" : "attached"} // clearance ${runtime.authority}`, tone: "amber" }, { text: `session owner: ${user}`, tone: "dim" }]); }
-  if (["seed", "status"].includes(normalized)) return result([{ text: `POWER ${runtime.energy}% | O2 ${runtime.oxygen}% | HULL ${runtime.hull}% | MEMORY ${runtime.memory}%`, tone: "amber" }, { text: `NETWORK ${runtime.network} | AUTHORITY ${runtime.authority} | BOOT ${runtime.boot}`, tone: runtime.network === "STABLE" ? "output" : "error" }, { text: `${runtime.services.length} ship service(s) altered | ${runtime.credentials.length} credential(s) accepted | ${runtime.mountedVolumes.length} volume(s)`, tone: "dim" }]);
+  if (["seed", "status"].includes(normalized)) return result([{ text: `POWER ${runtime.energy.toFixed(1)}% | O2 ${runtime.oxygen.toFixed(1)}% | HULL ${runtime.hull}% | MEMORY ${runtime.memory}%`, tone: "amber" }, { text: `NETWORK ${runtime.network} | AUTHORITY ${runtime.authority} | BOOT ${runtime.boot}`, tone: runtime.network === "STABLE" ? "output" : "error" }, { text: `GEN ${runtime.systems.generators.filter((generator) => generator.state === "ONLINE").length}/${runtime.systems.generators.length} ONLINE | LIFE ${runtime.systems.lifeSupport.cycle} | FORECAST ${runtime.systems.lifeSupport.forecast}%`, tone: runtime.systems.lifeSupport.cycle === "RUNNING" ? "output" : "amber" }, { text: `${runtime.services.length} ship service(s) altered | ${runtime.credentials.length} credential(s) accepted | ${runtime.mountedVolumes.length} volume(s)`, tone: "dim" }, ...(runtime.systems.notices.at(-1) ? [{ text: `LAST EVENT :: ${runtime.systems.notices.at(-1)}`, tone: "dim" as Tone }] : [])]);
+  if (["power", "generators"].includes(normalized)) return result([{ text: "POWER DISTRIBUTION // LIVE", tone: "system" }, ...runtime.systems.generators.map((generator) => ({ text: `${generator.id} ${generator.state.padEnd(8)} ${String(generator.health).padStart(3)}% ${String(generator.output).padStart(3)}kW :: ${generator.bus}${generator.fault ? ` // ${generator.fault}` : ""}`, tone: generator.state === "ONLINE" ? "output" as Tone : "amber" as Tone })), ...runtime.systems.buses.map((bus) => ({ text: `BUS ${bus.id.padEnd(5)} ${bus.state.padEnd(9)} LOAD ${bus.load.toFixed(1)}/${bus.capacity}kW`, tone: bus.state === "STABLE" ? "output" as Tone : "amber" as Tone }))]);
+  if (["life", "o2"].includes(normalized)) return result([{ text: "LIFE SUPPORT // CONTROL READOUT", tone: "system" }, { text: `SCRUBBER-A :: ${runtime.systems.lifeSupport.scrubberA}`, tone: (runtime.systems.lifeSupport.scrubberA === "ONLINE" ? "output" : "amber") as Tone }, { text: `SCRUBBER-B :: ${runtime.systems.lifeSupport.scrubberB}`, tone: (runtime.systems.lifeSupport.scrubberB === "ONLINE" ? "output" : "amber") as Tone }, { text: `CYCLE      :: ${runtime.systems.lifeSupport.cycle}`, tone: (runtime.systems.lifeSupport.cycle === "RUNNING" ? "output" : "amber") as Tone }, { text: `FORECAST   :: ${runtime.systems.lifeSupport.forecast}%`, tone: "amber" }]);
+  if (["syslog", "notices"].includes(normalized)) return result([{ text: "SYSTEM NOTICE BUFFER // LOCAL", tone: "system" }, ...(runtime.systems.notices.length ? runtime.systems.notices.slice(-12).map((notice, index) => ({ text: `${String(index + 1).padStart(2, "0")}  ${notice}`, tone: notice.includes("FAULT") || notice.includes("DESCENDING") ? "amber" as Tone : "dim" as Tone })) : [{ text: "buffer empty", tone: "dim" as Tone }])]);
+  if (normalized === "repair") {
+    const target = (args[0] ?? "").toUpperCase();
+    if (!target) return result([{ text: "repair: target required", tone: "error" }]);
+    if (!runtime.firmware.maintenancePort || !runtime.mountedVolumes.includes("/maintenance")) return result([{ text: "repair: maintenance channel unavailable", tone: "error" }, { text: "device: /maintenance // firmware port not mounted", tone: "dim" }]);
+    const authorized = clearanceRank[runtime.authority] >= clearanceRank.OFFICER || runtime.credentials.includes("LOOP_02") || runtime.credentials.includes("BOTANY") || runtime.services.includes("ENGINEERING");
+    if (!authorized) return result([{ text: "repair: operator clearance insufficient", tone: "error" }]);
+    const repairedGenerator = repairGenerator(runtime.systems, target);
+    if (repairedGenerator) return result([{ text: `maintenance procedure accepted :: ${target}`, tone: "system" }, { text: "controller checksum :: restored", tone: "output" }, { text: "generator state :: ONLINE", tone: "amber" }], { nextRuntime: { ...runtime, systems: repairedGenerator } });
+    const repairedLife = repairLifeSupport(runtime.systems, target);
+    if (repairedLife) return result([{ text: `maintenance procedure accepted :: ${target}`, tone: "system" }, { text: "life-support cycle :: state transition recorded", tone: "output" }], { nextRuntime: { ...runtime, systems: repairedLife } });
+    return result([{ text: `repair: target unavailable or no procedure :: ${target}`, tone: "error" }]);
+  }
   if (["audio", "player"].includes(normalized)) return result([{ text: "AUDIO DEVICE // /dev/audio0", tone: "system" }, { text: `STATE    :: ${runtime.audio.status}`, tone: runtime.audio.status === "PLAYING" ? "amber" : "output" }, { text: `FILE     :: ${runtime.audio.path ?? "<none>"}`, tone: "output" }, { text: `TITLE    :: ${runtime.audio.title ?? "<none>"}`, tone: "output" }, { text: `BUFFER   :: ${runtime.audio.position}s / ${runtime.audio.duration ?? "--"}`, tone: "dim" }]);
   if (["play", "music"].includes(normalized)) {
     const target = args.length ? resolveFile(index, arg, cwd) : runtime.audio.path ? resolveFile(index, runtime.audio.path, cwd) : undefined;
