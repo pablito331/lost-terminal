@@ -40,6 +40,22 @@
 - [ ] Implementar um player nativo que abra arquivos `.MUS` dentro do Seed OS e mantenha reprodução em segundo plano.
 - [ ] Implementar um tradutor nativo capaz de ler arquivos pessoais em idiomas maternos e produzir uma camada temporária de interpretação.
 - [ ] Modelar jogos e utilitários como aplicações reais do sistema, sem revelar objetivos ou linguagem externa de jogo.
+- [ ] Criar uma biblioteca diegética em `/library` com livros técnicos, científicos, históricos e operacionais em múltiplos idiomas.
+- [ ] Indexar livros por idioma, assunto, autor, departamento, nível, revisão, acesso e referências cruzadas sem transformar a biblioteca em um menu de objetivos.
+- [ ] Criar o formato de documento `.BOOK` e comandos de consulta que permitam navegar, abrir, pesquisar e relacionar capítulos ao VFS.
+- [ ] Definir a linguagem executável `Seed Script`, inspirada em Portugol e Python, com variáveis, condições, ciclos, funções, entrada, saída e APIs internas limitadas.
+- [ ] Implementar uma IDE diegética em `.PROC` para criar, editar, salvar, compilar, testar, depurar e instalar programas Seed Script.
+- [ ] Fazer o compilador retornar erros técnicos úteis, limites de segurança, dependências ausentes, permissões e incompatibilidades de firmware.
+- [ ] Ligar programas criados pelo jogador a caminhos funcionais de acesso, reparo, substituição ou diagnóstico dos sistemas da nave.
+- [ ] Criar exemplos quase funcionais de tripulantes, bibliotecas de código e módulos corrompidos que possam ser completados sem entregar soluções narrativas.
+- [ ] Implementar o app oficial de mensagens e um canal não registrado, com `.MSG`, filas, destinatários, timestamps, anexos, apagamentos e permissões.
+- [ ] Adicionar vídeos públicos de missão, notícias, mensagens não abertas e registros de comunicação, mantendo vínculos entre pessoas, famílias, departamentos e incidentes.
+- [ ] Substituir resumos genéricos por livros com capítulos substantivos, exemplos, procedimentos, limitações, exercícios diegéticos e referências cruzadas verificáveis.
+- [ ] Dar a cada obra uma voz editorial própria: manual operacional, tratado científico, caderno de bordo, apostila de formação, norma corporativa ou publicação clandestina.
+- [ ] Revisar traduções e textos nativos para preservar registro, intimidade, hierarquia, terminologia e diferenças culturais sem usar frases automáticas repetidas.
+- [ ] Fazer cada material técnico ensinar algo utilizável no Seed OS e relacionar conceitos a sensores, barramentos, firmware, biologia, navegação ou manutenção reais do VFS.
+- [ ] Criar níveis de leitura e pré-requisitos naturais, permitindo que a biblioteca seja vasta e parcialmente redundante sem revelar qual documento é necessário.
+- [ ] Revisar a continuidade editorial dos livros, mensagens e vídeos contra a cronologia, os personagens, as famílias, os departamentos e as falhas já estabelecidas.
 - [ ] Isolar processos, tratar crash, corrupção, dependências ausentes, versão incompatível e encerramento forçado.
 - [ ] Permitir que aplicações alterem apenas os estados e dispositivos autorizados, respeitando BIOS, autoridade e permissões.
 - [ ] Criar compatibilidade de aplicações entre versões do Seed OS e registros de migração/rollback.

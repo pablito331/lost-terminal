@@ -147,3 +147,21 @@
 - `LS /apps` mostrou `passenger-014-seed-tool.PROC` junto dos executáveis de sistema, com idioma `fr-FR`, tamanho `7.2 KB` e origem pessoal preservada.
 - A ajuda interna do shell contém `APPS`, `INSTALL <file.PROC>` e `UNINSTALL <app.PROC>`; o histórico antigo exibido no reload não refletia a lista atual, mas a implementação está presente no código.
 - `pnpm check` passou sem erros TypeScript e `pnpm build` passou; permanece apenas o aviso não bloqueante de chunk JavaScript acima de 500 kB.
+
+## Expansão de conhecimento e programação — verificação inicial
+
+- A biblioteca passou a incluir livros `.BOOK` com capítulos substantivos sobre shell, Seed Script, confiabilidade, navegação, xenobiologia, matemática de telemetria, comunicações, história da missão, reparos, hidropônica e operações, distribuídos entre pt-BR, en-US, es-MX, ja-JP, zh-CN e ar-EG.
+- O VFS passou a incluir mensagens `.MSG` oficiais e do canal `GHOST`, vídeos públicos `.VIS` e referências cruzadas para manifestos, arquivos médicos, programas e eventos de engenharia.
+- A IDE textual expõe `EDIT`, `COMPILE` e `RUN`; a compilação registra fonte e artefato no snapshot local, e o runtime Seed Script lê telemetria e solicita reparos por APIs mediadas pelo kernel.
+- O app `/apps/ide.PROC` abre instruções operacionais do workbench e `/apps/msg.PROC` abre a fila oficial; `LIBRARY`, `BOOK` e `MSG` permanecem comandos de shell, sem dashboard ou superfície externa.
+- `pnpm check` e `pnpm build` passaram após a integração. O build mantém apenas o aviso não bloqueante do chunk acima de 500 kB.
+- Capturas desktop (1280x720) e móvel (390x844) mantiveram o terminal de tela inteira, o POST bloqueado, o contraste fosforescente e sem overflow horizontal aparente.
+
+## Auditoria editorial e de runtime
+
+- A auditoria determinística encontrou `15` livros `.BOOK`, `5` mensagens `.MSG` e `2` vídeos públicos `.VIS` no VFS inicial.
+- O acervo cobre os oito idiomas operacionais: `pt-BR`, `en-US`, `es-MX`, `fr-FR`, `de-DE`, `ja-JP`, `zh-CN` e `ar-EG`; cada obra mantém assunto, nível, autor, capítulos, palavras-chave e referências.
+- Todas as referências dos livros, mensagens e vídeos foram resolvidas contra o VFS. A migração dos links musicais legados de `.REC` para `.MUS` também foi corrigida nos 600 documentos pessoais e no log de acesso de Ivo Chen.
+- O conteúdo oficial e o canal `GHOST` agora armazenam IDs canônicos de tripulantes, aceitam grupos operacionais auditáveis e exibem handles/nome ao abrir a mensagem, sem perder a rastreabilidade técnica.
+- O exemplo de reparo Seed Script compilou e executou em runtime mediado, produzindo `REPAIR REQUEST :: SCRUBBER-B` sem contornar autoridade, firmware ou o kernel.
+- Resultado final da auditoria: `SEED_ECOSYSTEM_AUDIT=PASS`; `pnpm check` e `pnpm build` também passaram, mantendo apenas o aviso não bloqueante do chunk acima de 500 kB.

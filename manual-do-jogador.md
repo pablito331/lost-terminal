@@ -69,6 +69,8 @@ OPEN /ship/manifest.SCR
 | `.HLT` | Dados biométricos, clínicos e históricos de saúde. | Estado, horários, alterações, diagnósticos e cruzamento com registros de trabalho. |
 | `.ATA` | Atas, ocorrências, registros oficiais e eventos de serviço. | Participantes, decisões, dissensos, responsáveis e versões substituídas. |
 | `.PROC` | Programas, utilitários, ferramentas e aplicações executáveis. | Tipo, código, dependências, permissões e efeitos possíveis. |
+| `.BOOK` | Livros técnicos, científicos, históricos e operacionais da biblioteca. | Idioma original, nível, autor, capítulos, referências e pré-requisitos implícitos. |
+| `.MSG` | Mensagens oficiais e tráfego não registrado entre terminais. | Canal, estado de entrega, remetente, destinatários, anexos, horário e omissões. |
 
 O sistema pode mostrar apenas metadados ou negar o conteúdo. Isso pode ocorrer por clearance insuficiente, conta não autenticada, volume não montado, corrupção ou combinação desses estados.
 
@@ -260,7 +262,57 @@ UNINSTALL /apps/passenger-014-seed-tool.PROC
 
 O registro de aplicativos faz parte do snapshot local da sessão. Após reload ou reboot, os programas instalados reaparecem em `/apps` sem qualquer tela de recuperação.
 
-## 12. Música e reprodução em segundo plano
+### IDE e Seed Script
+
+O aplicativo `/apps/ide.PROC` é uma oficina textual para escrever programas em Seed Script. A linguagem combina a legibilidade de Portugol com expressões simples inspiradas em Python, mas não possui acesso ao navegador, ao DOM, ao armazenamento da sessão ou a dispositivos brutos. Toda leitura e toda operação de manutenção passam pelo kernel do Seed OS.
+
+Um arquivo de trabalho pode ser criado e alimentado diretamente no terminal:
+
+```text
+EDIT /workspace/o2-check.PROC
+EDIT /workspace/o2-check.PROC APPEND let level = seed("oxygen")
+EDIT /workspace/o2-check.PROC APPEND print("O2 BEFORE = " + level)
+EDIT /workspace/o2-check.PROC APPEND if level < 12:
+EDIT /workspace/o2-check.PROC APPEND   print("RESERVE THRESHOLD")
+COMPILE /workspace/o2-check.PROC
+RUN /workspace/o2-check.PROC
+```
+
+Use dois espaços por nível de recuo. O compilador limita o tamanho da fonte, rejeita bindings externos, controla loops e informa a linha exata dos erros. `COMPILE` apenas deriva um artefato executável; `RUN` ainda verifica autoridade, BIOS, volumes, dependências e estado dos sistemas. Um programa pode estar correto e mesmo assim receber `repair rejected`, porque a linguagem solicita uma operação e não concede autorização.
+
+Os livros em `/library/programming` contêm a especificação prática e exercícios sem solução automática. Os livros de engenharia, matemática, biologia, navegação e operações explicam os dados que um programa pode observar e os efeitos que o kernel pode aceitar. Não é necessário ler a biblioteca em ordem; a indexação existe para permitir caminhos diferentes e referências cruzadas.
+
+## 12. Biblioteca, mensagens e registros visuais
+
+Consulte o catálogo sem abrir uma interface externa:
+
+```text
+LIBRARY
+LIBRARY programming
+LIBRARY biology
+BOOK /library/programming/seed-script-field-guide.BOOK
+```
+
+Os livros têm níveis `INTRO`, `CREW`, `OFFICER` ou `ROOT`, mas o nível não informa uma solução narrativa. Ele descreve a precisão operacional, a autoridade do vocabulário e o tipo de conhecimento pressuposto. Há obras em português, inglês, espanhol, francês, alemão, japonês, chinês e árabe; a fonte materna não deve ser tratada como uma tradução descartável.
+
+O mensageiro oficial pode ser aberto como aplicativo ou consultado pelo shell:
+
+```text
+RUN /apps/msg.PROC
+MSG INBOX
+MSG OPEN /comms/seed/mission-brief-001.MSG
+```
+
+O canal não registrado não aparece na fila oficial. A consulta direta exige encontrar o caminho e possuir o clearance correspondente:
+
+```text
+MSG GHOST
+MSG OPEN /comms/ghost/loop-02-handshake.MSG
+```
+
+Mensagens podem permanecer `UNREAD` mesmo quando a entrega foi registrada. Anexos `.SCR`, `.REC`, `.VIS` e `.BOOK` são referências ao VFS, não conteúdo automaticamente confiável. Vídeos públicos e notícias estão indexados como `.VIS`; abra os arquivos, compare legendas, horários e mensagens de entrega antes de assumir que uma transmissão é completa.
+
+## 13. Música e reprodução em segundo plano
 
 Arquivos musicais usam a extensão `.MUS`. Eles não são exibidos como MP3, WAV ou outro formato comum.
 
@@ -284,7 +336,7 @@ Comandos de controle:
 
 O navegador exige uma ação do usuário antes de permitir áudio. Portanto, a música nunca começa durante o boot automaticamente.
 
-## 13. Telemetria da nave
+## 14. Telemetria da nave
 
 Use os aliases abaixo para consultar o estado operacional:
 
@@ -302,7 +354,7 @@ NETWORK FRAGMENTED | AUTHORITY GUEST | BOOT RUNNING
 
 Os valores podem mudar quando um programa autorizado for executado ou quando a nave passar por um ciclo de reboot.
 
-## 14. BIOS, firmware e reinicialização
+## 15. BIOS, firmware e reinicialização
 
 Algumas operações não podem ser realizadas no shell normal. Para entrar no firmware:
 
@@ -370,7 +422,7 @@ Modos disponíveis:
 
 Um reboot pode limpar buffers, interromper serviços e registrar a sessão. Em estados que não sejam `RUNNING`, o shell aceita somente comandos técnicos de firmware até um novo `BOOT`.
 
-## 15. Um fluxo de uso possível
+## 16. Um fluxo de uso possível
 
 O fluxo abaixo não é uma solução narrativa; é apenas um exemplo de como operar o sistema:
 
@@ -403,7 +455,7 @@ STATUS
 
 Quando uma operação retornar `permission denied`, `account required`, `volume hidden`, `binary unreadable` ou `dependency unavailable`, a mensagem descreve o estado técnico atual. Leia outros arquivos, verifique o firmware e observe os registros antes de insistir.
 
-## 16. Princípios de interação
+## 17. Princípios de interação
 
 O Seed OS não confirma descobertas narrativas. Não há marcador de missão, indicador de avanço ou mensagem de sucesso de investigação. O sistema apenas monta arquivos, altera permissões, registra acessos, executa processos, muda serviços e responde ao estado atual.
 
