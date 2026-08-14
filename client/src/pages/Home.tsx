@@ -10,9 +10,10 @@ type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
 type BootState = "RUNNING" | "HALTED" | "DIAGNOSTIC" | "SAFE_MODE" | "RECOVERY" | "BIOS";
 type FirmwareFlags = { maintenancePort: boolean; ghostBus: boolean; cryo601: boolean; rootWrite: boolean; hiddenVolume: boolean; debugConsole: boolean };
-type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number };
+type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "SOURCE_MISSING"; position: number };
+type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState };
 
-const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0 };
+const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0 } };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -32,11 +33,52 @@ function initialLines(): TerminalLine[] {
   ];
 }
 
+type BootStep = { at: number; lines: TerminalLine[] };
+
+const BOOT_STEPS: BootStep[] = [
+  { at: 0, lines: [
+    { text: "SEED FIRMWARE 0.9.1 // COLD START", tone: "system" },
+    { text: "POWER RAIL ................. ONLINE", tone: "output" },
+    { text: "POST CONTROLLER ............ WAIT", tone: "dim" },
+  ] },
+  { at: 5000, lines: [
+    { text: "HARDWARE INITIALIZATION", tone: "system" },
+    { text: "MEMORY CHECK ............... 65536 MB / PASS", tone: "output" },
+    { text: "VFS /SHIP .................. MOUNT READ_ONLY", tone: "output" },
+    { text: "SECTOR SCAN ................ 03 BAD / QUARANTINED", tone: "amber" },
+  ] },
+  { at: 10000, lines: [
+    { text: "SEED CORP // SYSTEM TREE", tone: "system" },
+    { text: "        ████████", tone: "output" },
+    { text: "    ████████████████", tone: "output" },
+    { text: "  █████  SEED  █████", tone: "output" },
+    { text: "████████████████████████", tone: "output" },
+    { text: "▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓", tone: "dim" },
+  ] },
+  { at: 15000, lines: [
+    { text: "CRYOGENIC ARRAY SCAN", tone: "system" },
+    { text: "CAPSULES 001—600 .......... RECORDS PRESENT", tone: "output" },
+    { text: "CAPSULE 601 ............... OWNER NULL", tone: "amber" },
+    { text: "NEURAL LINK ................ SIGNATURE UNRESOLVED", tone: "amber" },
+  ] },
+  { at: 25000, lines: [
+    { text: "FATAL ERROR: Neural_Buffer_Corrupted", tone: "error" },
+    { text: "MEMORY WIPE DETECTED :: IDENTITY HASH INCOMPLETE", tone: "error" },
+    { text: "SUPPORT LIFE ................ 14% / RESERVE UNSTABLE", tone: "amber" },
+  ] },
+  { at: 30000, lines: [
+    { text: "KERNEL PANIC // FALLBACK", tone: "error" },
+    { text: "AUTHORITY .................. GUEST", tone: "amber" },
+    { text: "STDIN ATTACHED ............. LOCAL COMMAND BUFFER READY", tone: "system" },
+    { text: "FIRMWARE CONSOLE ........... LOCKED", tone: "dim" },
+  ] },
+];
+
 function prompt(cwd: string, input = "", runtime?: RuntimeState) { const user = runtime?.authenticatedUsers.at(-1)?.toLowerCase() ?? "guest"; return `${user}@seed:${cwd}$${input ? ` ${input}` : ""}`; }
 
 function renderPayload(payload: FilePayload): TerminalLine[] {
   if (payload.kind === "text") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, ...payload.lines.map((text) => ({ text, tone: "output" as Tone }))];
-  if (payload.kind === "audio") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, { text: `AUDIO BUFFER :: ${payload.duration}`, tone: "system" }, { text: "", tone: "dim" }, { text: payload.transcript, tone: "output" }];
+  if (payload.kind === "audio") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, { text: `AUDIO BUFFER :: ${payload.duration}`, tone: "system" }, ...(payload.audioType === "MUSIC" ? [{ text: `CONTAINER :: .MUS / ${payload.codec ?? "SEED-AUDIO"}`, tone: "dim" as Tone }, { text: `TITLE     :: ${payload.title ?? "UNNAMED"}`, tone: "output" as Tone }, { text: `ARTIST    :: ${payload.artist ?? "UNKNOWN"}`, tone: "output" as Tone }] : []), { text: "", tone: "dim" }, { text: payload.transcript, tone: "output" }];
   if (payload.kind === "visual") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, { text: payload.caption, tone: "system" }, { text: payload.alt, tone: "output" }, { text: "", tone: "dim" }, ...payload.telemetry.map((text) => ({ text, tone: "output" as Tone }))];
   if (payload.kind === "health") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, ...payload.vitals.map((vital) => ({ text: `${vital.label.padEnd(18)} : ${vital.value}`, tone: vital.status === "critical" ? "error" as Tone : vital.status === "warning" ? "amber" as Tone : "output" as Tone })), { text: "", tone: "dim" }, { text: payload.note, tone: "output" }];
   if (payload.kind === "incident") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, { text: `SEVERITY :: ${payload.severity}`, tone: payload.severity === "CRITICAL" ? "error" : "amber" }, ...payload.events.map((event) => ({ text: event, tone: "output" as Tone }))];
@@ -90,6 +132,10 @@ function helpLines(): TerminalLine[] {
     { text: "NVRAM [SET k v]       inspect boot variables", tone: "output" },
     { text: "MOUNT / UMOUNT        attach or remove firmware volumes", tone: "output" },
     { text: "BOOT [mode]           leave firmware and start a mode", tone: "amber" },
+    { text: "PLAY <file.MUS>       attach a music container to /dev/audio0", tone: "amber" },
+    { text: "PAUSE / RESUME        control the active audio process", tone: "amber" },
+    { text: "STOP                  terminate the active audio process", tone: "amber" },
+    { text: "AUDIO / PLAYER        inspect audio process and device state", tone: "output" },
     { text: "RUN / EXEC / START    execute a .PROC program", tone: "amber" },
     { text: "SEED / STATUS         read live ship telemetry", tone: "output" },
     { text: "WHOAMI / SUDO         inspect or request authority", tone: "output" },
@@ -161,6 +207,22 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
   }
   if (["whoami"].includes(normalized)) { const user = runtime.authenticatedUsers.at(-1) ?? "GUEST"; return result([{ text: `${user} // identity hash ${user === "GUEST" ? "unresolved" : "attached"} // clearance ${runtime.authority}`, tone: "amber" }, { text: `session owner: ${user}`, tone: "dim" }]); }
   if (["seed", "status"].includes(normalized)) return result([{ text: `POWER ${runtime.energy}% | O2 ${runtime.oxygen}% | HULL ${runtime.hull}% | MEMORY ${runtime.memory}%`, tone: "amber" }, { text: `NETWORK ${runtime.network} | AUTHORITY ${runtime.authority} | BOOT ${runtime.boot}`, tone: runtime.network === "STABLE" ? "output" : "error" }, { text: `${runtime.services.length} ship service(s) altered | ${runtime.credentials.length} credential(s) accepted | ${runtime.mountedVolumes.length} volume(s)`, tone: "dim" }]);
+  if (["audio", "player"].includes(normalized)) return result([{ text: "AUDIO DEVICE // /dev/audio0", tone: "system" }, { text: `STATE    :: ${runtime.audio.status}`, tone: runtime.audio.status === "PLAYING" ? "amber" : "output" }, { text: `FILE     :: ${runtime.audio.path ?? "<none>"}`, tone: "output" }, { text: `TITLE    :: ${runtime.audio.title ?? "<none>"}`, tone: "output" }, { text: `BUFFER   :: ${runtime.audio.position}s / ${runtime.audio.duration ?? "--"}`, tone: "dim" }]);
+  if (["play", "music"].includes(normalized)) {
+    const target = args.length ? resolveFile(index, arg, cwd) : runtime.audio.path ? resolveFile(index, runtime.audio.path, cwd) : undefined;
+    if (!target || target.extension !== ".MUS" || target.payload.kind !== "audio" || target.payload.audioType !== "MUSIC") return result([{ text: `play: .MUS container not found: ${arg || "<empty>"}`, tone: "error" }]);
+    const hasClearance = clearanceRank[runtime.authority] >= clearanceRank[target.clearance];
+    const hasAccount = Boolean(target.access && runtime.authenticatedUsers.includes(target.access.username));
+    if (!hasClearance && !hasAccount) return result([{ text: `play: permission denied :: required ${target.clearance}`, tone: "error" }]);
+    if (target.integrity === "CORRUPTED" && !runtime.recoveredPaths.includes(target.path)) return result([{ text: `play: container unreadable :: ${target.path}`, tone: "error" }]);
+    const audio: AudioState = { path: target.path, source: target.payload.mediaSrc, title: target.payload.title ?? target.name, artist: target.payload.artist, duration: target.payload.duration, status: target.payload.mediaSrc ? "PLAYING" : "SOURCE_MISSING", position: 0 };
+    return result([{ text: `AUDIO OPEN :: ${target.path}`, tone: "system" }, { text: `DEVICE     :: /dev/audio0`, tone: "output" }, { text: `CONTAINER  :: ${target.payload.codec ?? "SEED-AUDIO"}`, tone: "dim" }, { text: target.payload.mediaSrc ? `PLAYBACK   :: ${audio.title ?? "UNNAMED"}` : "SOURCE    :: NOT MOUNTED / metadata only", tone: target.payload.mediaSrc ? "amber" : "dim" }], { nextRuntime: { ...runtime, audio } });
+  }
+  if (["pause", "resume", "stop"].includes(normalized)) {
+    if (!runtime.audio.path) return result([{ text: `audio: no active process :: ${normalized}`, tone: "error" }]);
+    const status: AudioState["status"] = normalized === "pause" ? "PAUSED" : normalized === "stop" ? "STOPPED" : runtime.audio.source ? "PLAYING" : "SOURCE_MISSING";
+    return result([{ text: `AUDIO ${normalized.toUpperCase()} :: ${runtime.audio.path}`, tone: normalized === "stop" ? "dim" : "amber" }], { nextRuntime: { ...runtime, audio: { ...runtime.audio, status, ...(normalized === "stop" ? { position: 0 } : {}) } } });
+  }
   if (normalized === "sudo") return result([{ text: "sudo: clearance required :: request denied", tone: "error" }]);
   if (["ls", "dir"].includes(normalized)) {
     const target = arg ? normalizePath(arg, cwd) : cwd;
@@ -262,17 +324,54 @@ export default function Home() {
   const index = useMemo(createSeedIndex, []);
   const [cwd, setCwd] = useState("/");
   const [command, setCommand] = useState("");
-  const [lines, setLines] = useState<TerminalLine[]>(initialLines);
+  const [bootComplete, setBootComplete] = useState(false);
+  const [bootPhase, setBootPhase] = useState(0);
+  const [bootLines, setBootLines] = useState<TerminalLine[]>(BOOT_STEPS[0].lines);
+  const [lines, setLines] = useState<TerminalLine[]>([]);
   const [runtime, setRuntime] = useState<RuntimeState>(initialRuntime);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [focusPath, setFocusPath] = useState("/BOOT.ATA");
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const activeFile = index.fileMap.get(focusPath.toLowerCase());
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    if (bootComplete) return;
+    const next = BOOT_STEPS[bootPhase + 1];
+    if (!next) {
+      setBootComplete(true);
+      setLines(initialLines());
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setBootPhase((current) => current + 1);
+      setBootLines((current) => [...current, ...next.lines]);
+    }, next.at - BOOT_STEPS[bootPhase].at);
+    return () => window.clearTimeout(timer);
+  }, [bootComplete, bootPhase]);
+  useEffect(() => {
+    if (bootComplete) return;
+    const interruptBoot = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setBootComplete(true);
+      setBootPhase(BOOT_STEPS.length - 1);
+      setLines(initialLines());
+    };
+    window.addEventListener("keydown", interruptBoot);
+    return () => window.removeEventListener("keydown", interruptBoot);
+  }, [bootComplete]);
+  useEffect(() => { if (bootComplete) inputRef.current?.focus(); }, [bootComplete]);
   useEffect(() => { outputRef.current?.scrollTo({ top: outputRef.current.scrollHeight }); }, [lines]);
+  useEffect(() => {
+    const element = audioRef.current;
+    if (!element) return;
+    if (!bootComplete || !runtime.audio.source || !runtime.audio.path) { element.pause(); return; }
+    if (element.dataset.path !== runtime.audio.path) { element.src = runtime.audio.source; element.dataset.path = runtime.audio.path; element.currentTime = runtime.audio.position; }
+    if (runtime.audio.status === "PLAYING") void element.play().catch(() => undefined);
+    else element.pause();
+  }, [bootComplete, runtime.audio]);
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
@@ -295,14 +394,24 @@ export default function Home() {
     if (event.key === "Tab") { event.preventDefault(); const partial = command.split(/\s+/).pop()?.toLowerCase() ?? ""; const candidate = listDirectory(index, cwd).find((entry) => entry.name.toLowerCase().startsWith(partial)); if (candidate) setCommand(command.slice(0, command.length - partial.length) + candidate.name); }
   };
 
+  if (!bootComplete) {
+    const progress = Math.round((BOOT_STEPS[bootPhase].at / BOOT_STEPS[BOOT_STEPS.length - 1].at) * 100);
+    return <main className="terminal-app boot-app">
+      <header className="terminal-header"><div className="brand-lockup"><span className="brand-glyph">✣</span><div><strong>SEED OS</strong><span>FIRMWARE // COLD START</span></div></div><div className="header-readout"><span>POST: <b>ACTIVE</b></span><span>BUS: <b>LOCKED</b></span><span>PHASE: <b>{String(bootPhase + 1).padStart(2, "0")}/06</b></span></div></header>
+      <section className="boot-window"><div className="boot-title"><span>SEED FIRMWARE // HARDWARE INITIALIZATION</span><span>NO USER SESSION</span></div><div className="boot-output">{bootLines.map((line, indexLine) => <div key={`${indexLine}-${line.text}`} className={`terminal-line tone-${line.tone ?? "output"}`}><span className="line-prefix">{line.tone === "error" ? "!" : line.tone === "amber" ? "~" : "·"}</span><span>{line.text || "\u00a0"}</span></div>)}<div className="boot-progress"><span style={{ width: `${progress}%` }} /></div><div className="boot-progress-label">POST {String(progress).padStart(3, "0")}% :: COMMAND BUS LOCKED</div></div></section>
+      <footer className="terminal-footer"><span>SEED OS v0.9.1</span><span>FIRMWARE / POST</span><span>STDIN OFFLINE</span></footer>
+    </main>;
+  }
+
   return <main className="terminal-app" onClick={() => inputRef.current?.focus()}>
-    <header className="terminal-header"><div className="brand-lockup"><span className="brand-glyph">✣</span><div><strong>SEED OS</strong><span>LOST TERMINAL // FALLBACK SHELL</span></div></div><div className="header-readout"><span>VFS: <b>READ_ONLY</b></span><span>PASSENGERS: <b>600</b></span><span>O2: <b className="danger">{String(runtime.oxygen).padStart(2, "0")}%</b></span></div></header>
+    <header className="terminal-header"><div className="brand-lockup"><span className="brand-glyph">✣</span><div><strong>SEED OS</strong><span>SEED FIRMWARE // FALLBACK SHELL</span></div></div><div className="header-readout"><span>VFS: <b>READ_ONLY</b></span><span>PASSENGERS: <b>600</b></span><span>O2: <b className="danger">{String(runtime.oxygen).padStart(2, "0")}%</b></span></div></header>
     <div className="terminal-warning"><span>● {runtime.authenticatedUsers.at(-1) ?? "GUEST SESSION"} / {runtime.boot} SHELL</span><span className="warning-text">! NEURAL_BUFFER_CORRUPTED</span><span>FAMILY INDEX: 150 / LANGUAGE TABLE: 08</span></div>
     <section className="terminal-window">
       <div className="terminal-title"><span>SEED COMMAND INTERPRETER</span><span>PID 0001 // LOCAL EXECUTION</span></div>
       <div className="terminal-output" ref={outputRef}>{lines.map((line, indexLine) => <div key={`${indexLine}-${line.text}`} className={`terminal-line tone-${line.tone ?? "output"}`}><span className="line-prefix">{line.tone === "error" ? "!" : line.tone === "amber" ? "~" : line.tone === "prompt" ? ">" : "·"}</span><span>{line.text || "\u00a0"}</span></div>)}<div className="terminal-cursor-line"><span>{prompt(cwd, "", runtime)}</span><i /></div></div>
       <form className="terminal-input-row" onSubmit={submit}><span>{prompt(cwd, "", runtime)}</span><input ref={inputRef} value={command} onChange={(event) => setCommand(event.target.value)} onKeyDown={onKeyDown} autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Seed OS command input" /><button type="submit">EXEC</button></form>
     </section>
-    <footer className="terminal-footer"><span>SEED OS v0.9.1</span><span>{runtime.boot} / {runtime.network}</span><span>{activeFile?.extension ?? ".SYS"} // {runtime.authority}</span></footer>
+    <audio ref={audioRef} preload="metadata" aria-label="Seed OS audio device" />
+    <footer className="terminal-footer"><span>SEED OS v0.9.1</span><span>{runtime.boot} / {runtime.network}</span><span>AUDIO: {runtime.audio.status}</span><span>{activeFile?.extension ?? ".SYS"} // {runtime.authority}</span></footer>
   </main>;
 }

@@ -2,6 +2,36 @@
 
 ## Próxima iteração
 
+- [ ] Criar um registro de aplicações com ID, versão, extensão, tipo, entrypoint, permissões, dependências, dispositivos e capacidades.
+- [ ] Separar arquivos executáveis `.PROC` de processos ativos, com PID, estado, memória, portas, arquivos abertos e dispositivo de saída.
+- [ ] Definir APIs internas para VFS, áudio, tradução, input, relógio, telemetria, permissões e estado da nave.
+- [ ] Implementar um player nativo que abra arquivos `.MUS` dentro do Seed OS e mantenha reprodução em segundo plano.
+- [ ] Implementar um tradutor nativo capaz de ler arquivos pessoais em idiomas maternos e produzir uma camada temporária de interpretação.
+- [ ] Modelar jogos e utilitários como aplicações reais do sistema, sem revelar objetivos ou linguagem externa de jogo.
+- [ ] Isolar processos, tratar crash, corrupção, dependências ausentes, versão incompatível e encerramento forçado.
+- [ ] Permitir que aplicações alterem apenas os estados e dispositivos autorizados, respeitando BIOS, autoridade e permissões.
+- [ ] Criar compatibilidade de aplicações entre versões do Seed OS e registros de migração/rollback.
+- [ ] Persistir processos, arquivos abertos, áudio ativo, tradução e efeitos da aplicação dentro da sessão do terminal.
+- [ ] Testar o ecossistema com o shell como ponto único de entrada, sem dashboard paralelo ou player externo.
+- [x] Definir a extensão proprietária de música, preferencialmente `.MUS`, separando-a de `.REC` para voz e interceptações.
+- [x] Manter o codec real, duração, taxa, canal, checksum e MIME apenas em metadados internos do Seed OS, sem expor `.mp3`, `.wav` ou `.ogg`.
+- [x] Modelar músicas por passageiro com título, autor, idioma/cultura, família, data, origem, humor técnico e relações com outros arquivos.
+- [ ] Permitir arquivos `.MUS` ausentes, corrompidos, criptografados ou protegidos por conta, como qualquer outro artefato do VFS.
+- [x] Criar um comando de reprodução que o jogador descubra pela documentação do próprio sistema, sem botão ou tutorial externo.
+- [x] Implementar reprodução em segundo plano enquanto comandos continuam funcionando no shell.
+- [x] Implementar comandos técnicos para iniciar, pausar, retomar, parar, avançar e consultar o buffer da faixa.
+- [x] Mostrar somente estado nativo de áudio, como dispositivo, buffer, duração e checksum, sem uma interface de player convencional.
+- [ ] Vincular músicas a diários, fotos, vídeos, famílias, idiomas e momentos da cronologia sem transformar toda faixa em pista explícita.
+- [x] Respeitar autoplay bloqueado pelo navegador e iniciar áudio apenas após uma ação do usuário no terminal.
+- [x] Testar silêncio durante o boot, reprodução após descoberta e persistência do estado ao navegar pelo VFS ou entrar na BIOS.
+- [x] Criar uma tela inicial de boot do Seed OS antes do shell, sem prompt disponível durante a inicialização.
+- [x] Exibir POST, checagem de memória, montagem read-only do VFS, setores defeituosos, varredura das cápsulas 001–600 e detecção da cápsula 601.
+- [x] Exibir o erro técnico `FATAL ERROR: Neural_Buffer_Corrupted` e transferir a sessão para `GUEST / FALLBACK SHELL`.
+- [x] Exibir a árvore ANSI da Seed Corp usando blocos Unicode, sem texto explicando a história ou orientando o usuário.
+- [x] Permitir que a sequência seja observada integralmente e oferecer somente um atalho técnico de interrupção/reinicialização, se necessário.
+- [x] Remover “Lost Terminal” de títulos, subtítulos, rodapé, favicon/metadados visíveis e strings do shell.
+- [x] Remover referências a jogo, produto ou interface externa do `index.html`, mantendo apenas a identidade operacional do Seed OS.
+- [x] Garantir que o primeiro prompt só apareça depois de `fallback`, suporte de vida crítico e montagem do shell.
 - [x] Criar uma bíblia de continuidade com datas relativas, eventos principais, versões do boot, estado da nave, responsáveis e consequências.
 - [x] Validar que os 600 passageiros, 150 famílias, nacionalidades, idiomas, cargos, departamentos e cápsulas não se contradigam.
 - [x] Validar que cada personagem citado em diário, áudio, foto, vídeo, ata, advertência, memorando ou log exista no manifesto.
