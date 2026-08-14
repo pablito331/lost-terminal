@@ -13,10 +13,11 @@ type TerminalLine = { text: string; tone?: Tone };
 type BootState = "RUNNING" | "HALTED" | "DIAGNOSTIC" | "SAFE_MODE" | "RECOVERY" | "BIOS";
 type FirmwareFlags = { maintenancePort: boolean; ghostBus: boolean; cryo601: boolean; rootWrite: boolean; hiddenVolume: boolean; debugConsole: boolean };
 type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "SOURCE_MISSING"; position: number };
-type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
+type InstalledApp = { sourcePath: string; installedPath: string; installedAt: string; owner?: string };
+type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
 type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
-const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0 }, systems: createInitialShipSystems() };
+const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0 }, systems: createInitialShipSystems() };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -116,10 +117,12 @@ function fileLine(file: SeedFile) { return `${file.name.padEnd(28)} ${file.exten
 
 function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): SessionSnapshot | null {
   if (!snapshot || snapshot.version !== 1 || !snapshot.runtime || typeof snapshot.runtime !== "object") return null;
-  const cwd = typeof snapshot.cwd === "string" && index.directories.includes(snapshot.cwd) ? snapshot.cwd : "/";
-  const focusPath = typeof snapshot.focusPath === "string" && index.fileMap.has(snapshot.focusPath.toLowerCase()) ? snapshot.focusPath : "/BOOT.ATA";
   const runtime = snapshot.runtime;
-  const audioFile = runtime.audio?.path ? index.fileMap.get(runtime.audio.path.toLowerCase()) : undefined;
+  const installedApps = Array.isArray(runtime.installedApps) ? runtime.installedApps.filter((app) => Boolean(app && typeof app.sourcePath === "string" && typeof app.installedPath === "string")) : [];
+  const sessionIndex = createRuntimeIndex(index, installedApps);
+  const cwd = typeof snapshot.cwd === "string" && sessionIndex.directories.includes(snapshot.cwd) ? snapshot.cwd : "/";
+  const focusPath = typeof snapshot.focusPath === "string" && sessionIndex.fileMap.has(snapshot.focusPath.toLowerCase()) ? snapshot.focusPath : "/BOOT.ATA";
+  const audioFile = runtime.audio?.path ? sessionIndex.fileMap.get(runtime.audio.path.toLowerCase()) : undefined;
   const audioPayload = audioFile?.payload.kind === "audio" ? audioFile.payload : undefined;
   return {
     version: 1,
@@ -128,6 +131,7 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
     runtime: {
       ...initialRuntime,
       ...runtime,
+      installedApps: Array.isArray(runtime.installedApps) ? runtime.installedApps.filter((app) => Boolean(app && typeof app.sourcePath === "string" && typeof app.installedPath === "string")) : [],
       firmware: { ...initialRuntime.firmware, ...(runtime.firmware ?? {}) },
       nvram: { ...initialRuntime.nvram, ...(runtime.nvram ?? {}) },
       systems: {
@@ -150,6 +154,28 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
     focusPath,
     lines: Array.isArray(snapshot.lines) ? snapshot.lines.slice(-320) : initialLines(),
   };
+}
+
+function createRuntimeIndex(index: SeedIndex, installedApps: InstalledApp[]): SeedIndex {
+  const installedFiles = installedApps.flatMap((app) => {
+    const source = index.fileMap.get(app.sourcePath.toLowerCase());
+    if (!source || source.extension !== ".PROC" || source.payload.kind !== "program") return [];
+    const slash = app.installedPath.lastIndexOf("/");
+    const directory = slash <= 0 ? "/" : app.installedPath.slice(0, slash);
+    const name = app.installedPath.slice(slash + 1);
+    return [{ ...source, path: app.installedPath, directory, name, layer: "SYSTEM" as const, system: true, updated: "INSTALLED", summary: `Aplicativo instalado a partir de ${source.path}.`, links: [...source.links, { target: source.path, label: "SOURCE", relation: "origem do pacote" }] }];
+  });
+  const files = [...index.files, ...installedFiles];
+  const fileMap = new Map(files.map((file) => [file.path.toLowerCase(), file]));
+  const directories = new Set(index.directories);
+  installedFiles.forEach((file) => { let current = file.directory; while (current && current !== "/") { directories.add(current); current = current.slice(0, current.lastIndexOf("/")) || "/"; } });
+  const counts = { ...index.counts };
+  installedFiles.forEach((file) => { counts[file.extension] += 1; });
+  return { ...index, files, fileMap, directories: Array.from(directories).sort(), counts };
+}
+
+function resolveAppFile(index: SeedIndex, rawPath: string, cwd: string): SeedFile | undefined {
+  return resolveFile(index, rawPath, cwd) ?? index.files.find((file) => file.directory === "/apps" && file.name.toLowerCase() === rawPath.trim().toLowerCase());
 }
 
 function snapshotForStorage(cwd: string, runtime: RuntimeState, history: string[], focusPath: string, lines: TerminalLine[]): SessionSnapshot {
@@ -195,6 +221,9 @@ function helpLines(): TerminalLine[] {
     { text: "STOP                  terminate the active audio process", tone: "amber" },
     { text: "AUDIO / PLAYER        inspect audio process and device state", tone: "output" },
     { text: "RUN / EXEC / START    execute a .PROC program", tone: "amber" },
+    { text: "APPS                  list registered applications in /apps", tone: "system" },
+    { text: "INSTALL <file.PROC>   register a discovered program in /apps", tone: "amber" },
+    { text: "UNINSTALL <app.PROC> remove a user-installed application", tone: "amber" },
     { text: "SEED / STATUS         read live ship telemetry", tone: "output" },
     { text: "POWER / GENERATORS    inspect generator and bus state", tone: "output" },
     { text: "LIFE / O2             inspect life-support state", tone: "output" },
@@ -288,6 +317,30 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
     return result([{ text: `repair: target unavailable or no procedure :: ${target}`, tone: "error" }]);
   }
   if (["audio", "player"].includes(normalized)) return result([{ text: "AUDIO DEVICE // /dev/audio0", tone: "system" }, { text: `STATE    :: ${runtime.audio.status}`, tone: runtime.audio.status === "PLAYING" ? "amber" : "output" }, { text: `FILE     :: ${runtime.audio.path ?? "<none>"}`, tone: "output" }, { text: `TITLE    :: ${runtime.audio.title ?? "<none>"}`, tone: "output" }, { text: `BUFFER   :: ${runtime.audio.position}s / ${runtime.audio.duration ?? "--"}`, tone: "dim" }]);
+  if (["apps", "applications"].includes(normalized)) {
+    const apps = index.files.filter((file) => file.directory === "/apps" && file.extension === ".PROC");
+    return result([{ text: "APPLICATION REGISTRY // /apps", tone: "system" }, { text: `${apps.length} executable(s) registered :: ${runtime.installedApps.length} user install(s)`, tone: "dim" }, ...apps.map((file) => ({ text: `${file.name.padEnd(28)} ${file.clearance.padEnd(8)} ${runtime.installedApps.some((app) => app.installedPath.toLowerCase() === file.path.toLowerCase()) ? "USER" : "SYSTEM"} :: ${file.summary}`, tone: file.clearance === "GUEST" ? "output" as Tone : "amber" as Tone }))]);
+  }
+  if (["install", "install-app"].includes(normalized)) {
+    const source = resolveFile(index, arg, cwd);
+    if (!source || source.extension !== ".PROC" || source.payload.kind !== "program") return result([{ text: `install: executable .PROC not found: ${arg || "<empty>"}`, tone: "error" }]);
+    if (source.path.startsWith("/apps/")) return result([{ text: `install: already registered :: ${source.path}`, tone: "dim" }]);
+    const hasAccount = Boolean(source.access && runtime.authenticatedUsers.includes(source.access.username));
+    if (clearanceRank[runtime.authority] < clearanceRank[source.clearance] && !hasAccount) return result([{ text: `install: permission denied :: required ${source.clearance}`, tone: "error" }]);
+    if (source.integrity === "CORRUPTED" && !runtime.recoveredPaths.includes(source.path)) return result([{ text: `install: package unreadable :: ${source.path}`, tone: "error" }]);
+    const installedPath = `/apps/${source.ownerId ? `${source.ownerId}-${source.name}` : source.name}`;
+    if (index.fileMap.has(installedPath.toLowerCase())) return result([{ text: `install: target reserved :: ${installedPath}`, tone: "error" }]);
+    const installedApp: InstalledApp = { sourcePath: source.path, installedPath, installedAt: new Date().toISOString(), owner: runtime.authenticatedUsers.at(-1) };
+    const nextRuntime = { ...runtime, installedApps: [...runtime.installedApps, installedApp] };
+    return result([{ text: `INSTALL ${source.path}`, tone: "system" }, { text: `registry entry :: ${installedPath}`, tone: "output" }, { text: "application state :: REGISTERED / READY", tone: "amber" }], { nextRuntime, focus: installedPath });
+  }
+  if (["uninstall", "remove-app"].includes(normalized)) {
+    const target = normalizePath(arg || "", cwd).toLowerCase();
+    const installed = runtime.installedApps.find((app) => app.installedPath.toLowerCase() === target || app.installedPath.toLowerCase() === `/apps/${arg.trim().toLowerCase()}`);
+    if (!installed) return result([{ text: `uninstall: user application not registered :: ${arg || "<empty>"}`, tone: "error" }]);
+    const nextRuntime = { ...runtime, installedApps: runtime.installedApps.filter((app) => app.installedPath !== installed.installedPath) };
+    return result([{ text: `UNINSTALL ${installed.installedPath}`, tone: "system" }, { text: "registry entry :: removed", tone: "output" }, { text: `source preserved :: ${installed.sourcePath}`, tone: "dim" }], { nextRuntime });
+  }
   if (["play", "music"].includes(normalized)) {
     const target = args.length ? resolveFile(index, arg, cwd) : runtime.audio.path ? resolveFile(index, runtime.audio.path, cwd) : undefined;
     if (!target || target.extension !== ".MUS" || target.payload.kind !== "audio" || target.payload.audioType !== "MUSIC") return result([{ text: `play: .MUS container not found: ${arg || "<empty>"}`, tone: "error" }]);
@@ -383,7 +436,7 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
     return result([{ text: `credential accepted :: ${credential.payload.service}`, tone: "amber" }, { text: `target available :: ${credential.payload.target}`, tone: "system" }], { nextRuntime });
   }
   if (["run", "exec", "start"].includes(normalized)) {
-    const file = resolveFile(index, arg, cwd);
+    const file = resolveAppFile(index, arg, cwd);
     if (!file || file.kind !== "program" || file.payload.kind !== "program") return result([{ text: `run: executable .PROC not found: ${arg || "<empty>"}`, tone: "error" }]);
     const hasAccount = Boolean(file.access && runtime.authenticatedUsers.includes(file.access.username));
     if (clearanceRank[runtime.authority] < clearanceRank[file.clearance] && !hasAccount) return result([{ text: `run: permission denied :: required ${file.clearance}`, tone: "error" }]);
@@ -418,7 +471,8 @@ export default function Home() {
   const [storageReady, setStorageReady] = useState(false);
   const restoredRef = useRef(false);
   const pendingSnapshotRef = useRef<SessionSnapshot | null>(null);
-  const activeFile = index.fileMap.get(focusPath.toLowerCase());
+  const runtimeIndex = useMemo(() => createRuntimeIndex(index, runtime.installedApps), [index, runtime.installedApps]);
+  const activeFile = runtimeIndex.fileMap.get(focusPath.toLowerCase());
 
   useEffect(() => {
     let alive = true;
@@ -489,7 +543,7 @@ export default function Home() {
     event?.preventDefault();
     const raw = command.trim();
     if (!raw) return;
-    const result = runCommand(raw, cwd, index, runtime);
+    const result = runCommand(raw, cwd, runtimeIndex, runtime);
     setCwd(result.nextCwd);
     setRuntime(result.nextRuntime ?? runtime);
     setLines((current) => raw.toLowerCase() === "clear" || raw.toLowerCase() === "cls" ? [] : [...current, ...result.lines]);
@@ -503,7 +557,7 @@ export default function Home() {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "l") { event.preventDefault(); setLines([]); return; }
     if (event.key === "ArrowUp") { event.preventDefault(); const next = historyIndex < 0 ? history.length - 1 : Math.max(0, historyIndex - 1); setHistoryIndex(next); setCommand(history[next] ?? ""); return; }
     if (event.key === "ArrowDown") { event.preventDefault(); const next = historyIndex < 0 ? -1 : historyIndex + 1; setHistoryIndex(next); setCommand(next >= 0 ? history[next] ?? "" : ""); return; }
-    if (event.key === "Tab") { event.preventDefault(); const partial = command.split(/\s+/).pop()?.toLowerCase() ?? ""; const candidate = listDirectory(index, cwd).find((entry) => entry.name.toLowerCase().startsWith(partial)); if (candidate) setCommand(command.slice(0, command.length - partial.length) + candidate.name); }
+    if (event.key === "Tab") { event.preventDefault(); const partial = command.split(/\s+/).pop()?.toLowerCase() ?? ""; const candidate = listDirectory(runtimeIndex, cwd).find((entry) => entry.name.toLowerCase().startsWith(partial)); if (candidate) setCommand(command.slice(0, command.length - partial.length) + candidate.name); }
   };
 
   if (!bootComplete) {

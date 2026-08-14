@@ -126,3 +126,24 @@
 - `whoami` pós-reload confirmou `I.CHEN // identity hash attached // clearance OFFICER`; `seed` confirmou `POWER 24.2%`, `O2 9.4%`, `NETWORK STABLE`, `GEN 2/3 ONLINE`, `LIFE RUNNING`, `1 ship service(s) altered`, `1 credential(s) accepted` e `2 volume(s)`. A diferença entre 9.3% no cabeçalho inicial e 9.4% após o comando corresponde ao tick normal de consumo/produção durante a execução.
 - Screenshot responsivo em `390x844` mostrou o POST em tela inteira, cabeçalho e rodapé legíveis, barra de progresso dentro da largura disponível e nenhum overflow horizontal visível.
 - `pnpm check` e `pnpm build` passaram após a correção do O2 e dos testes de sistemas. O build mantém apenas o aviso não bloqueante de chunk JavaScript acima de 500 kB. A inspeção do console encontrou somente mensagens históricas de falha de HMR de iterações anteriores; não houve erro novo durante a bateria final.
+
+## Registro de aplicativos instaláveis
+
+- O terminal atualizado carregou sem erro visual após a implementação do inventário persistente.
+- O POST continua em tela cheia, com `/SHIP` montado em READ_ONLY e o barramento de comandos bloqueado durante a inicialização.
+- O catálogo inicial permanece em `/apps` com `edit.PROC`, `calc.PROC`, `sniff.PROC`, `player.PROC` e `backdoor_exploit.PROC`.
+- O novo fluxo planejado usa `APPS`, `INSTALL <arquivo.PROC>` e `UNINSTALL <app.PROC>`; instalações serão materializadas no VFS de sessão e preservadas no snapshot local.
+- Após o POST atualizado, o fallback voltou corretamente a `I.CHEN / RUNNING SHELL`, preservando o diretório `/engineering/loop-02`, o histórico, a autoridade `OFFICER`, os reparos e o estado do player.
+- `APPS` listou cinco executáveis de sistema em `/apps`: `edit.PROC`, `calc.PROC`, `sniff.PROC`, `player.PROC` e `backdoor_exploit.PROC`, com `0 user install(s)`.
+- `INSTALL /personal/passenger-014/seed-tool.PROC` foi aceito por Ivo Chen/OFFICER e registrou `application state :: REGISTERED / READY` no alvo `/apps/passenger-014-seed-tool.PROC`.
+- `RUN /apps/passenger-014-seed-tool.PROC` executou o mesmo calibrador funcional, retornando handshake aceito, oscilação térmica reduzida e canal privado visível.
+- Um segundo `APPS` listou `6 executable(s) registered :: 1 user install(s)` e marcou `passenger-014-seed-tool.PROC` como `USER`, com a origem pessoal preservada no resumo.
+- `UNINSTALL /apps/passenger-014-seed-tool.PROC` removeu o registro e informou `source preserved :: /personal/passenger-014/seed-tool.PROC`.
+- `APPS` após a remoção voltou a `5 executable(s) registered :: 0 user install(s)`, confirmando que o VFS pessoal não foi apagado.
+- O programa foi reinstalado para o teste de persistência; o reload reiniciou o POST corretamente com `BUS: LOCKED`, sem aceitar comandos antes do fallback.
+- Durante o reload, o POST avançou pelas fases `04/06` e `05/06`, repetindo as checagens de VFS, setores ruins, árvore Seed Corp, cápsulas e falha neural antes de liberar o shell.
+- Após o fallback, `APPS` restaurou `6 executable(s) registered :: 1 user install(s)` e manteve `passenger-014-seed-tool.PROC` como `USER`, confirmando a persistência do catálogo no snapshot local.
+- `RUN /apps/passenger-014-seed-tool.PROC` funcionou depois do reload, retornando novamente o calibrador com handshake aceito.
+- `LS /apps` mostrou `passenger-014-seed-tool.PROC` junto dos executáveis de sistema, com idioma `fr-FR`, tamanho `7.2 KB` e origem pessoal preservada.
+- A ajuda interna do shell contém `APPS`, `INSTALL <file.PROC>` e `UNINSTALL <app.PROC>`; o histórico antigo exibido no reload não refletia a lista atual, mas a implementação está presente no código.
+- `pnpm check` passou sem erros TypeScript e `pnpm build` passou; permanece apenas o aviso não bloqueante de chunk JavaScript acima de 500 kB.

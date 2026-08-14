@@ -10,6 +10,11 @@
 - [ ] Testar autenticação, permissões, corrupção, `FSCK`, `RECOVER`, `RUN`, `SUDO`, BIOS, reboot, montagem e persistência local.
 - [ ] Verificar restauração do snapshot após recarregar a página e comportamento em viewport móvel.
 - [ ] Corrigir falhas encontradas e repetir as validações afetadas.
+- [ ] Catalogar os aplicativos `.PROC` já funcionais e definir quais ficam disponíveis no `/apps` desde o primeiro boot.
+- [ ] Implementar instalação diegética de `.PROC` descobertos nos arquivos pessoais, com verificação de dependências, permissões, integridade e compatibilidade.
+- [ ] Persistir o inventário de aplicativos instalados no snapshot local e reconstruir o diretório `/apps` após reload ou reboot.
+- [ ] Criar comandos técnicos para instalar, listar, abrir, executar e remover aplicações sem adicionar dashboard ou interface externa.
+- [ ] Fazer os aplicativos instalados manterem entrypoint, versão, origem, proprietário, capacidades, estado e falhas no VFS.
 - [x] Definir um relógio de simulação e taxas de consumo para energia, oxigênio, memória, calor, casco e rede.
 - [x] Modelar geradores, barramentos, relés, baterias, distribuição e serviços de suporte à vida no runtime.
 - [x] Criar documentos técnicos coerentes para geradores, filtros de O2, circuitos, falhas e procedimentos de manutenção.

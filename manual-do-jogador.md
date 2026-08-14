@@ -234,6 +234,32 @@ Os três comandos são aliases. Um programa pode:
 
 Quando uma dependência estiver ausente, o programa retorna `execution blocked :: dependency unavailable`. A mensagem identifica o requisito técnico, não explica a intenção narrativa.
 
+### Registro de aplicativos
+
+O diretório `/apps` contém os programas de sistema registrados no terminal desde o primeiro boot. Consulte o catálogo sem sair do shell:
+
+```text
+APPS
+CD /apps
+LS
+```
+
+Um `.PROC` encontrado em um terminal pessoal pode ser registrado para acesso rápido. A instalação não cria uma interface externa nem altera o arquivo original: ela grava uma entrada local no registro de aplicativos e materializa uma cópia operacional em `/apps`.
+
+```text
+INSTALL /personal/passenger-014/seed-tool.PROC
+APPS
+RUN /apps/passenger-014-seed-tool.PROC
+```
+
+O programa instalado conserva sua origem, proprietário, dependências, clearance e efeitos. A instalação exige a mesma permissão necessária para ler o pacote e não contorna corrupção ou autenticação. Para remover apenas a cópia registrada, mantendo o arquivo de origem intacto:
+
+```text
+UNINSTALL /apps/passenger-014-seed-tool.PROC
+```
+
+O registro de aplicativos faz parte do snapshot local da sessão. Após reload ou reboot, os programas instalados reaparecem em `/apps` sem qualquer tela de recuperação.
+
 ## 12. Música e reprodução em segundo plano
 
 Arquivos musicais usam a extensão `.MUS`. Eles não são exibidos como MP3, WAV ou outro formato comum.
