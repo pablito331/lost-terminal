@@ -8,13 +8,13 @@
 - [x] Integrar player `.MUS`, leitor de arquivos, mensageria e aplicativos `.PROC` a instrumentos visuais próprios, com estado, falhas e limites herdados do Seed OS.
 - [x] Projetar comportamento responsivo para mouse, toque e teclado, preservando densidade investigativa e sem converter a experiência em um painel convencional.
 - [x] Executar `pnpm check` e build de produção.
-- [ ] Inspecionar logs de desenvolvimento, console do navegador e requisições após boot e interação.
-- [ ] Verificar a sequência de boot, bloqueio do prompt e entrada no fallback shell.
+- [x] Inspecionar logs de desenvolvimento, console do navegador e requisições após boot e interação; evidência registrada em `validation-suno-playlist.md`.
+- [x] Verificar a sequência de boot, bloqueio do prompt e entrada no fallback shell.
 - [ ] Testar `PWD`, `LS`, `DIR`, `CD`, `CAT`, `TYPE`, `OPEN`, `TREE`, `FIND` e `SEARCH` com caminhos válidos e inválidos.
 - [ ] Testar `SEED`, `POWER`, `GENERATORS`, `LIFE`, `SYSLOG`, `NOTICES` e `REPAIR`, verificando consumo e avisos discretos.
 - [ ] Testar autenticação, permissões, corrupção, `FSCK`, `RECOVER`, `RUN`, `SUDO`, BIOS, reboot, montagem e persistência local.
-- [ ] Verificar restauração do snapshot após recarregar a página e comportamento em viewport móvel.
-- [ ] Corrigir falhas encontradas e repetir as validações afetadas.
+- [x] Verificar restauração do snapshot após recarregar a página e comportamento em viewport móvel.
+- [x] Corrigir falhas encontradas e repetir as validações afetadas; o erro residual de `dotenv` foi isolado ao processo antigo e as validações foram repetidas após reinicialização.
 - [ ] Garantir uma primeira cadeia de acesso inteiramente legível por GUEST, com pista, credencial, alvo e elevação verificáveis antes de qualquer arquivo CREW.
 - [ ] Auditar cada credencial contextual para que sua fonte tenha clearance igual ou inferior ao nível exigido para descobri-la, evitando bloqueios circulares de progressão.
 - [ ] Criar validação automatizada que simule o primeiro acesso GUEST e rejeite credenciais cuja única fonte esteja protegida por CREW, OFFICER ou ROOT.
