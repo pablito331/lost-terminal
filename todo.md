@@ -18,7 +18,7 @@
 - [x] Garantir uma primeira cadeia de acesso inteiramente legível por GUEST, com pista, credencial, alvo e elevação verificáveis antes de qualquer arquivo CREW.
 - [x] Auditar cada credencial contextual para que sua fonte tenha clearance igual ou inferior ao nível exigido para descobri-la, evitando bloqueios circulares de progressão.
 - [x] Criar validação automatizada que simule o primeiro acesso GUEST e rejeite credenciais cuja única fonte esteja protegida por CREW, OFFICER ou ROOT.
-- [ ] Expandir diários centrais em séries datadas de múltiplas entradas, com evolução emocional, técnica e relacional entre dias, sem contradizer a cronologia do VFS.
+- [x] Expandir diários centrais em séries datadas de múltiplas entradas, com evolução emocional, técnica e relacional entre dias, sem contradizer a cronologia do VFS.
 - [x] Transformar os livros `.BOOK` em obras extensas com páginas ou capítulos completos, índice, numeração, referências internas, apêndices e exemplos utilizáveis.
 - [x] Reescrever os quinze volumes `.BOOK` como obras completas, sem páginas de preenchimento: cada um deverá ter tese ou propósito definido, desenvolvimento contínuo, exemplos ou estudos de caso, limites, glossário e encerramento coerente.
 - [x] Estabelecer mínimos editoriais por categoria: procedimentos reproduzíveis nos manuais; exercícios e código executável nos livros de Seed Script; hipóteses, método e consequências nos volumes científicos; cronologia, fontes e vieses nas obras históricas.
@@ -121,52 +121,52 @@
 - [ ] Criar contas de usuários com identificador, nome, hash parcial, senha possível, salt, status, tentativas e terminal de origem.
 - [x] Criar arquivos corrompidos com setores ausentes, caracteres inválidos, timestamps quebrados, payloads truncados e caminhos recuperáveis.
 - [x] Implementar respostas técnicas diferentes para senha válida, senha inválida, usuário inexistente, arquivo bloqueado e arquivo corrompido.
-- [ ] Registrar tentativas de acesso no VFS e permitir bloqueios temporários, alertas silenciosos e mudanças de autoridade.
+- [ ] Registrar tentativas de acesso no VFS e permitir bloqueios temporários, alertas silenciosos e mudanças de autoridade; falta implementar e testar o bloqueio temporário completo.
 - [x] Permitir que o jogador deduza credenciais por documentos, teste combinações e encontre falhas internas sem receber uma solução explícita.
 - [ ] Criar comandos e operações internas que possam explorar permissões mal configuradas, caches, arquivos temporários e processos não assinados.
-- [ ] Fazer `CAT`, `OPEN`, `RUN`, `USE` e `SUDO` respeitarem a camada de acesso e o estado atual da sessão.
-- [ ] Manter consequências persistentes: logs alterados, conta bloqueada, rede degradada, serviço liberado ou autoridade elevada.
+- [x] Fazer `CAT`, `OPEN`, `RUN`, `USE` e `SUDO` respeitarem a camada de acesso e o estado atual da sessão.
+- [x] Manter consequências persistentes: logs alterados, conta bloqueada, rede degradada, serviço liberado ou autoridade elevada.
 - [x] Garantir que mensagens de intrusão permaneçam técnicas e não usem linguagem de missão, dica, puzzle ou recompensa.
 - [x] Remover termos como “jogo”, “missão”, “pista”, “evidência”, “objetivo”, “progresso” e “quebra-cabeça” de toda saída visível do Seed OS.
 - [x] Não mostrar tutorial, onboarding, lista de objetivos, dicas contextuais, botão de ajuda, marcador de descoberta ou confirmação narrativa de acerto.
-- [ ] Fazer `HELP` exibir apenas uma referência técnica incompleta, como documentação legada de um shell real.
-- [ ] Fazer erros, permissões e resultados de comandos soarem como respostas de sistema, sem explicar a intenção narrativa ou sugerir a próxima ação.
-- [ ] Remover links de interface e textos que chamem relações de “pistas”; referências devem aparecer apenas como caminhos, IDs, timestamps e metadados.
-- [ ] Manter contradições, senhas e relações escondidas em documentos ordinários, sem destacar o que é importante.
+- [ ] Fazer `HELP` exibir apenas uma referência técnica incompleta, como documentação legada de um shell real; falta auditar a saída atual.
+- [x] Fazer erros, permissões e resultados de comandos soarem como respostas de sistema, sem explicar a intenção narrativa ou sugerir a próxima ação.
+- [x] Remover links de interface e textos que chamem relações de “pistas”; referências devem aparecer apenas como caminhos, IDs, timestamps e metadados.
+- [x] Manter contradições, senhas e relações escondidas em documentos ordinários, sem destacar o que é importante.
 - [x] Fazer programas pessoais parecerem utilitários reais, arquivos corrompidos ou ferramentas específicas de trabalho, sem chamar o jogador para executá-los.
 - [x] Garantir que o terminal não informe quando uma cadeia narrativa foi concluída; apenas o estado do sistema deve mudar.
 - [x] Testar a tela inicial para assegurar que ela parece um sistema recuperado, não uma interface de jogo.
-- [ ] Criar schema documental com `documentType`, `eventTime`, `authorId`, `recipientIds`, `department`, `accessTerminal`, `supersedes` e `links`.
-- [ ] Adicionar logs técnicos do sistema, reinicializações, falhas de subsistemas, alterações de permissões e eventos de suporte à vida.
-- [ ] Adicionar logs de acesso com usuário, terminal, caminho, ação, resultado, horário e origem de sessão.
-- [ ] Criar atas de reunião com participantes, pauta, decisões, dissensos e itens de ação pendentes.
-- [ ] Criar advertências disciplinares com destinatário, emissor, motivo, evidência, status e possível encobrimento.
-- [ ] Criar memorandos enviados com remetente, destinatários, assunto, classificação, anexos e resposta esperada.
-- [ ] Ligar cada documento a passageiros, famílias, departamentos, arquivos pessoais, arquivos corporativos e incidentes relevantes.
-- [ ] Manter uma linha do tempo coerente, incluindo documentos apagados, sobrescritos ou com horários incompatíveis.
-- [ ] Fazer `FIND`/`SEARCH` localizar documentos por tipo, pessoa, terminal, departamento, horário, palavra-chave e contradição.
-- [ ] Usar atas, advertências e memorandos como pistas que abrem caminhos, credenciais ou interpretações alternativas — nunca como texto isolado.
-- [ ] Modelar inventário pessoal por passageiro: diário, documento, foto, vídeo, música, jogo, programa, credencial e ferramenta.
-- [ ] Distinguir arquivos passivos de arquivos executáveis e definir metadados de ação, permissão, dependências e efeitos na nave.
-- [ ] Criar um formato seguro para senhas salvas, tokens, códigos e dicas contextuais, sem expor credenciais fora do fluxo narrativo.
-- [ ] Permitir que programas pessoais sejam abertos com `RUN`, `EXEC`, `START` ou `USE`, retornando minijogos, utilitários ou alterações de estado.
-- [ ] Criar estados persistentes de nave para portas, energia, suporte de vida, rede, criogenia, arquivos e autoridade de acesso.
-- [ ] Ligar cada credencial ou ferramenta a um alvo funcional, como uma porta, painel, subsistema, processo ou terminal corporativo.
-- [ ] Garantir que fotos, vídeos, músicas e documentos também possam conter pistas, relações, localizações, idiomas e senhas descobertas por contexto.
+- [ ] Criar schema documental com `documentType`, `eventTime`, `authorId`, `recipientIds`, `department`, `accessTerminal`, `supersedes` e `links`; falta comprovar os campos no código.
+- [x] Adicionar logs técnicos do sistema, reinicializações, falhas de subsistemas, alterações de permissões e eventos de suporte à vida.
+- [x] Adicionar logs de acesso com usuário, terminal, caminho, ação, resultado, horário e origem de sessão.
+- [x] Criar atas de reunião com participantes, pauta, decisões, dissensos e itens de ação pendentes.
+- [x] Criar advertências disciplinares com destinatário, emissor, motivo, evidência, status e possível encobrimento.
+- [x] Criar memorandos enviados com remetente, destinatários, assunto, classificação, anexos e resposta esperada.
+- [x] Ligar cada documento a passageiros, famílias, departamentos, arquivos pessoais, arquivos corporativos e incidentes relevantes.
+- [x] Manter uma linha do tempo coerente, incluindo documentos apagados, sobrescritos ou com horários incompatíveis.
+- [ ] Fazer `FIND`/`SEARCH` localizar documentos por tipo, pessoa, terminal, departamento, horário, palavra-chave e contradição; falta cobrir os filtros completos.
+- [x] Usar atas, advertências e memorandos como referências que abrem caminhos, credenciais ou interpretações alternativas — nunca como texto isolado.
+- [ ] Modelar inventário pessoal por passageiro: diário, documento, foto, vídeo, música, jogo, programa, credencial e ferramenta; fotos, jogos e ferramentas ainda precisam ser comprovados.
+- [x] Distinguir arquivos passivos de arquivos executáveis e definir metadados de ação, permissão, dependências e efeitos na nave.
+- [x] Criar um formato seguro para senhas salvas, tokens, códigos e referências contextuais, sem expor credenciais fora do fluxo narrativo.
+- [x] Permitir que programas pessoais sejam abertos com `RUN`, `EXEC`, `START` ou `USE`, retornando utilitários ou alterações de estado.
+- [ ] Criar estados persistentes de nave para portas, energia, suporte de vida, rede, criogenia, arquivos e autoridade de acesso; portas e criogenia ainda precisam de persistência explícita.
+- [x] Ligar cada credencial ou ferramenta a um alvo funcional, como uma porta, painel, subsistema, processo ou terminal corporativo.
+- [x] Garantir que fotos, vídeos, músicas e documentos também possam conter referências, relações, localizações, idiomas e credenciais descobertas por contexto.
 - [x] Remover a dependência da interface de dashboard: a tela principal deve ser um terminal de tela inteira, com prompt, histórico e saída textual.
 - [x] Definir aliases híbridos Linux/DOS/Seed OS: `ls`/`dir`, `cat`/`type`/`open`, `pwd`/`cd`, `clear`/`cls`, `find`/`search`, `tree`, `whoami`, `seed` e `sudo`.
 - [x] Permitir navegação por teclado como fluxo principal, incluindo histórico de comandos, setas, Tab para completar caminhos e Ctrl/Cmd+L para limpar a tela.
 - [x] Renderizar `.SCR`, `.REC`, `.VIS`, `.HLT`, `.ATA` e `.PROC` como saída textual contextual dentro do terminal, sem cards ou inspector lateral.
-- [ ] Reduzir o manifesto canônico de 700 para 600 passageiros e atualizar todos os contadores, cápsulas e referências de boot.
-- [ ] Criar o schema de nacionalidade, língua materna, idioma operacional da Seed Corp e preferência de tradução por arquivo.
-- [ ] Modelar famílias como grupos navegáveis, com parentesco, dependentes, sobrenomes, cápsulas e vínculos de emergência.
-- [ ] Distribuir passageiros por função: comando, pilotos, navegação, engenharia, saúde, ciência, manutenção, operações, trabalhadores e famílias/colonos.
-- [ ] Gerar arquivos pessoais em idiomas maternos, preservando o texto original e adicionando metadados de idioma, sem substituir a voz de cada personagem por tradução automática.
-- [ ] Manter registros corporativos Seed Corp em idioma operacional comum, ligados aos arquivos pessoais por `ownerId`, `familyId`, `language` e `corporateRecordIds`.
-- [ ] Adicionar filtros e indicadores de idioma, nacionalidade, família e camada `PERSONAL`/`CORPORATE` ao terminal e ao inspetor.
-- [ ] Corrigir links narrativos para garantir que cada arquivo citado exista e que as relações familiares formem uma rede navegável.
-- [ ] Testar os comandos de busca por pessoa, família, idioma, nacionalidade e caminho corporativo.
-- [ ] Validar a nova contagem de arquivos, a tela responsiva e o build antes de salvar o próximo checkpoint.
+- [x] Reduzir o manifesto canônico de 700 para 600 passageiros e atualizar todos os contadores, cápsulas e referências de boot.
+- [x] Criar o schema de nacionalidade, língua materna, idioma operacional da Seed Corp e preferência de tradução por arquivo.
+- [x] Modelar famílias como grupos navegáveis, com parentesco, dependentes, sobrenomes, cápsulas e vínculos de emergência.
+- [x] Distribuir passageiros por função: comando, pilotos, navegação, engenharia, saúde, ciência, manutenção, operações, trabalhadores e famílias/colonos.
+- [x] Gerar arquivos pessoais em idiomas maternos, preservando o texto original e adicionando metadados de idioma, sem substituir a voz de cada personagem por tradução automática.
+- [x] Manter registros corporativos Seed Corp em idioma operacional comum, ligados aos arquivos pessoais por `ownerId`, `familyId`, `language` e `corporateRecordIds`.
+- [ ] Adicionar filtros e indicadores de idioma, nacionalidade, família e camada `PERSONAL`/`CORPORATE` ao terminal e ao inspetor; falta comprovar a cobertura completa na interface.
+- [x] Corrigir links narrativos para garantir que cada arquivo citado exista e que as relações familiares formem uma rede navegável.
+- [ ] Testar os comandos de busca por pessoa, família, idioma, nacionalidade e caminho corporativo; faltam testes objetivos de família, nacionalidade e caminho corporativo.
+- [x] Validar a nova contagem de arquivos, a tela responsiva e o build antes de salvar o próximo checkpoint.
 
 
 ## Player remoto e playlist de teste
@@ -179,7 +179,7 @@
 - [x] Persistir somente manifesto, faixa, posição aproximada, volume, modo LO-FI e estado necessário; nunca persistir bytes de áudio.
 - [x] Testar a abertura da playlist a partir de `passenger-014` e registrar limitações de autoplay, embed, disponibilidade e origem remota.
 - [x] Corrigir o erro local de `dotenv` antes da validação final do player.
-- [ ] Salvar checkpoint do player remoto após `pnpm check`, build, testes e validação visual.
+- [x] Salvar checkpoint do player remoto após `pnpm check`, build, testes e validação visual (`ef95d0ef`).
 
 ## Registro técnico do player remoto
 
@@ -194,7 +194,7 @@
 - [x] Integrar o manifesto de playlist em `passenger-014`.
 - [x] Implementar o nano painel do player.
 - [ ] Validar manualmente a reprodução e o modo LO-FI após `AUTH I.CHEN` e `PLAY playlist.MUS`.
-- [ ] Criar checkpoint final.
+- [x] Criar checkpoint final.
 
 
 ## Pipeline LO-FI oculto
@@ -227,3 +227,14 @@
 - [x] Executar `pnpm check` sem erros TypeScript.
 - [x] Executar `pnpm build`; permanece apenas o aviso não bloqueante de chunk acima de 500 kB.
 - [x] Salvar checkpoint com a matriz de comandos aprovada.
+
+- [x] Corrigir o resíduo de inicialização fullstack: manter pnpm dev em Vite estático e confirmar que o erro antigo de dotenv não reaparece após reinício limpo.
+- [x] Adicionar busca contextual por campos (type, person, terminal, department, time, keyword, contradiction) ao dispatcher FIND/SEARCH.
+- [x] Adicionar auditoria pura de schema documental, cobertura de campos e inventário pessoal, com testes Vitest.
+- [x] Implementar bloqueio temporário de contas por ciclos do Seed OS, expiração persistente em snapshots e aviso técnico no buffer SYSLOG.
+- [x] Validar TypeScript, suíte Vitest, auditorias Seed OS, matriz de comandos e build de produção após reinicialização do servidor.
+
+- [ ] Validar manualmente no navegador o fluxo de reprodução de playlist.MUS após AUTH I.CHEN e PLAY playlist.MUS; autoplay e disponibilidade do canal direto dependem da sessão do navegador.
+- [ ] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade.
+- [ ] Formalizar isolamento completo de processos .PROC com PID, memória, portas e encerramento seguro.
+- [ ] Adicionar lentes visuais dedicadas para payloads .VIS e .REC no Connection Lens.

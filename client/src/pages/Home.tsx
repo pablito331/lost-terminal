@@ -11,6 +11,7 @@ import { createInitialShipSystems, repairGenerator, repairLifeSupport, ShipSyste
 import { compileSeedScript, runSeedScript, SeedScriptEffects } from "@/lib/seedScript";
 import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleNanoPanel, visibleNanoPanels, NanoPanel } from "@/lib/nanoPanels";
 import { configureLofiGraph } from "@/lib/audioPipeline";
+import { searchSeedFiles } from "@/lib/seedAudit";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
@@ -19,10 +20,10 @@ type FirmwareFlags = { maintenancePort: boolean; ghostBus: boolean; cryo601: boo
 type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "REMOTE" | "SOURCE_MISSING"; position: number; lofi: boolean };
 type InstalledApp = { sourcePath: string; installedPath: string; installedAt: string; owner?: string };
 type SeedWorkspaceProgram = { path: string; code: string[]; compiled: boolean; compiledAt?: string };
-type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; workspacePrograms: SeedWorkspaceProgram[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
+type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; workspacePrograms: SeedWorkspaceProgram[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; lockedUntil: Record<string, number>; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
 type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
-const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
+const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], lockedUntil: {}, recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -164,6 +165,7 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
       ...runtime,
       installedApps: Array.isArray(runtime.installedApps) ? runtime.installedApps.filter((app) => Boolean(app && typeof app.sourcePath === "string" && typeof app.installedPath === "string")) : [],
       workspacePrograms,
+      lockedUntil: runtime.lockedUntil && typeof runtime.lockedUntil === "object" ? Object.fromEntries(Object.entries(runtime.lockedUntil).filter(([key, value]) => typeof key === "string" && typeof value === "number")) : {},
       firmware: { ...initialRuntime.firmware, ...(runtime.firmware ?? {}) },
       nvram: { ...initialRuntime.nvram, ...(runtime.nvram ?? {}) },
       systems: {
@@ -234,7 +236,12 @@ function snapshotForStorage(cwd: string, runtime: RuntimeState, history: string[
 
 function tickRuntime(runtime: RuntimeState): RuntimeState {
   const tick = tickShipSystems(runtime.systems, { activeServices: runtime.services.length, audioPlaying: runtime.audio.status === "PLAYING", boot: runtime.boot });
-  return { ...runtime, energy: Math.max(0, Math.min(100, runtime.energy + tick.energyDelta)), oxygen: Math.max(0, Math.min(100, runtime.oxygen + tick.oxygenDelta)), network: tick.network, systems: tick.systems };
+  const expired = Object.entries(runtime.lockedUntil).filter(([, until]) => until <= tick.systems.clock).map(([user]) => user);
+  const base = { ...runtime, energy: Math.max(0, Math.min(100, runtime.energy + tick.energyDelta)), oxygen: Math.max(0, Math.min(100, runtime.oxygen + tick.oxygenDelta)), network: tick.network, systems: tick.systems };
+  if (!expired.length) return base;
+  const lockedUntil = { ...runtime.lockedUntil };
+  expired.forEach((user) => delete lockedUntil[user]);
+  return { ...base, lockedUsers: runtime.lockedUsers.filter((user) => !expired.includes(user)), failedLogins: { ...runtime.failedLogins, ...Object.fromEntries(expired.map((user) => [user, 0])) }, lockedUntil };
 }
 
 function helpLines(): TerminalLine[] {
@@ -249,6 +256,7 @@ function helpLines(): TerminalLine[] {
     { text: "MSG [INBOX|GHOST]      inspect official or unregistered messages", tone: "output" },
     { text: "TREE [path]           print a compact directory tree", tone: "output" },
     { text: "FIND / SEARCH <term>  search indexed paths and metadata", tone: "output" },
+    { text: "filters: type= person= terminal= department= time= keyword= contradiction=", tone: "dim" },
     { text: "DOCS [type]           list indexed corporate documents", tone: "output" },
     { text: "PASSENGER <term>      print a passenger record", tone: "output" },
     { text: "LANGUAGES             list passenger language distribution", tone: "output" },
@@ -489,9 +497,8 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
     return file ? result(openLines(file, index, runtime), { focus: file.path }) : result([{ text: `open: file not found: ${arg || "<empty>"}`, tone: "error" }]);
   }
   if (["find", "search"].includes(normalized)) {
-    const query = arg.toLowerCase();
-    const found = index.files.filter((file) => [file.path, file.summary, file.language, file.layer, file.documentType ?? "", file.eventTime ?? "", file.authorId ?? "", ...(file.recipientIds ?? []), file.department ?? "", file.accessTerminal ?? "", file.contradiction ?? "", ...file.keywords].join(" ").toLowerCase().includes(query)).slice(0, 24);
-    return result([{ text: `${found.length} match(es) for ${query || "<empty>"}`, tone: "system" }, ...found.map((file) => ({ text: `${file.path} :: ${file.language} :: ${file.layer}`, tone: "output" as Tone }))]);
+    const found = searchSeedFiles(index, arg);
+    return result([{ text: `${found.length} match(es) for ${arg || "<empty>"}`, tone: "system" }, ...found.map((file) => ({ text: `${file.path} :: ${file.language} :: ${file.layer}`, tone: "output" as Tone }))]);
   }
   if (["docs", "records", "index"].includes(normalized)) {
     const type = args[0]?.toUpperCase();
@@ -529,15 +536,19 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
     const key = account?.username ?? username.toUpperCase();
     const attempts = runtime.failedLogins[key] ?? 0;
     if (!account) return result([{ text: `auth: account not found :: ${username || "<empty>"}`, tone: "error" }]);
-    if (runtime.lockedUsers.includes(account.username)) return result([{ text: `auth: account locked :: ${account.username}`, tone: "error" }]);
+    const lockUntil = runtime.lockedUntil[account.username] ?? 0;
+    if (runtime.lockedUsers.includes(account.username) && lockUntil > runtime.systems.clock) return result([{ text: `auth: account locked :: ${account.username}`, tone: "error" }, { text: `lockout window :: ${lockUntil - runtime.systems.clock} cycle(s) remaining`, tone: "dim" }]);
+    const unlockedRuntime = runtime.lockedUsers.includes(account.username) ? { ...runtime, lockedUsers: runtime.lockedUsers.filter((user) => user !== account.username), lockedUntil: Object.fromEntries(Object.entries(runtime.lockedUntil).filter(([user]) => user !== account.username)), failedLogins: { ...runtime.failedLogins, [account.username]: 0 } } : runtime;
     if (account.secret.toLowerCase() !== secret.toLowerCase()) {
-      const nextAttempts = attempts + 1;
+      const nextAttempts = (unlockedRuntime.failedLogins[account.username] ?? attempts) + 1;
       const locked = nextAttempts >= account.lockoutAfter;
-      const nextRuntime = { ...runtime, failedLogins: { ...runtime.failedLogins, [account.username]: nextAttempts }, lockedUsers: locked ? Array.from(new Set([...runtime.lockedUsers, account.username])) : runtime.lockedUsers };
-      return result([{ text: `auth: rejected :: attempt ${nextAttempts}/${account.lockoutAfter}`, tone: "error" }, ...(locked ? [{ text: "auth: account locked", tone: "error" as Tone }] : [])], { nextRuntime });
+      const nextLockUntil = locked ? unlockedRuntime.systems.clock + 12 : 0;
+      const nextSystems = locked ? { ...unlockedRuntime.systems, notices: [...unlockedRuntime.systems.notices, `AUTH.LOCKOUT.${account.username}`].slice(-24) } : unlockedRuntime.systems;
+      const nextRuntime = { ...unlockedRuntime, failedLogins: { ...unlockedRuntime.failedLogins, [account.username]: nextAttempts }, lockedUsers: locked ? Array.from(new Set([...unlockedRuntime.lockedUsers, account.username])) : unlockedRuntime.lockedUsers, lockedUntil: locked ? { ...unlockedRuntime.lockedUntil, [account.username]: nextLockUntil } : unlockedRuntime.lockedUntil, systems: nextSystems };
+      return result([{ text: `auth: rejected :: attempt ${nextAttempts}/${account.lockoutAfter}`, tone: "error" }, ...(locked ? [{ text: "auth: account locked :: temporary", tone: "error" as Tone }, { text: "notice buffer :: AUTH.LOCKOUT recorded", tone: "dim" as Tone }] : [])], { nextRuntime });
     }
-    const authority = clearanceRank[account.authority] > clearanceRank[runtime.authority] ? account.authority : runtime.authority;
-    const nextRuntime = { ...runtime, authority, authenticatedUsers: Array.from(new Set([...runtime.authenticatedUsers, account.username])), failedLogins: { ...runtime.failedLogins, [account.username]: 0 } };
+    const authority = clearanceRank[account.authority] > clearanceRank[unlockedRuntime.authority] ? account.authority : unlockedRuntime.authority;
+    const nextRuntime = { ...unlockedRuntime, authority, authenticatedUsers: Array.from(new Set([...unlockedRuntime.authenticatedUsers, account.username])), failedLogins: { ...unlockedRuntime.failedLogins, [account.username]: 0 } };
     return result([{ text: `auth: session attached :: ${account.username}`, tone: "amber" }, { text: `clearance :: ${authority}`, tone: "system" }], { nextRuntime });
   }
   if (["use"].includes(normalized)) {
