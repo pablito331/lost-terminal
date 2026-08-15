@@ -205,3 +205,14 @@
 - [x] Tratar fontes cross-origin sem acesso ao áudio bruto: manter o embed funcional sem alegar processamento de áudio que a origem não permite.
 - [x] Garantir que autoplay bloqueado, erro de origem e ausência de faixa não quebrem o terminal nem exponham a origem externa.
 - [x] Cobrir o pipeline com testes unitários e validar que nenhum controle ou metadado técnico do filtro aparece no painel.
+
+
+## Correção do player externo
+
+- [x] Remover completamente o iframe/embed oficial do Suno do nano painel.
+- [x] Verificar se a fonte oferece URL de áudio direto público compatível com `HTMLAudioElement`; a autorização de uso permanece sob responsabilidade do proprietário do áudio.
+- [x] Implementar o player próprio do Seed OS com controles, progresso e estados diegéticos, sem renderizar a página ou o player da fonte.
+- [x] Se a fonte não permitir reprodução direta, manter somente o player próprio em estado `SOURCE_UNAVAILABLE` ou `REMOTE_BLOCKED`, sem fallback visual externo.
+- [x] Garantir que nenhum texto, ícone, marca, metadado ou controle do Suno apareça no DOM do Seed OS.
+- [ ] Testar áudio local, fonte remota permitida e fonte remota bloqueada com o mesmo componente.
+- [x] Atualizar a validação; checkpoint da correção será salvo após esta revisão.
