@@ -1,7 +1,8 @@
 /**
- * Style reminder: this page is a single recovered terminal, not a dashboard.
- * The prompt, monospace output, command history and terse system notices are
- * the interface. Phosphor green is live output; amber is a clue; red is danger.
+ * Style reminder: Seed OS is a diegetic Evidence Mesh, never a desktop clone.
+ * The central command channel remains authoritative; the Matter Index and
+ * Connection Lens are mouse-operable views of the same VFS and permissions.
+ * Phosphor green is live output; amber is a clue; red is danger.
  */
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createSeedIndex, FilePayload, SeedFile, SeedIndex, listDirectory, normalizePath, resolveFile } from "@/lib/seedData";
@@ -673,9 +674,8 @@ export default function Home() {
     else element.pause();
   }, [bootComplete, runtime.audio]);
 
-  const submit = (event?: FormEvent) => {
-    event?.preventDefault();
-    const raw = command.trim();
+  const executeCommand = (rawInput: string) => {
+    const raw = rawInput.trim();
     if (!raw) return;
     const result = runCommand(raw, cwd, runtimeIndex, runtime);
     setCwd(result.nextCwd);
@@ -687,6 +687,11 @@ export default function Home() {
     setCommand("");
   };
 
+  const submit = (event?: FormEvent) => {
+    event?.preventDefault();
+    executeCommand(command);
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "l") { event.preventDefault(); setLines([]); return; }
     if (event.key === "ArrowUp") { event.preventDefault(); const next = historyIndex < 0 ? history.length - 1 : Math.max(0, historyIndex - 1); setHistoryIndex(next); setCommand(history[next] ?? ""); return; }
@@ -694,22 +699,75 @@ export default function Home() {
     if (event.key === "Tab") { event.preventDefault(); const partial = command.split(/\s+/).pop()?.toLowerCase() ?? ""; const candidate = listDirectory(runtimeIndex, cwd).find((entry) => entry.name.toLowerCase().startsWith(partial)); if (candidate) setCommand(command.slice(0, command.length - partial.length) + candidate.name); }
   };
 
+  const directoryEntries = useMemo(() => listDirectory(runtimeIndex, cwd), [runtimeIndex, cwd]);
+  const appFiles = useMemo(() => runtimeIndex.files.filter((file) => file.directory === "/apps" && file.extension === ".PROC").slice(0, 5), [runtimeIndex]);
+  const visibleLinks = activeFile?.links.slice(0, 6) ?? [];
+  const selectedReadable = activeFile ? clearanceRank[runtime.authority] >= clearanceRank[activeFile.clearance] || Boolean(activeFile.access && runtime.authenticatedUsers.includes(activeFile.access.username)) : false;
+  const inspectEntry = (entry: ReturnType<typeof listDirectory>[number]) => {
+    if (entry.type === "dir") { executeCommand(`CD ${normalizePath(entry.name, cwd)}`); return; }
+    if (!entry.file) return;
+    setFocusPath(entry.file.path);
+    executeCommand(`OPEN ${entry.file.path}`);
+  };
+  const traceLink = (target: string) => {
+    setFocusPath(target);
+    executeCommand(`OPEN ${target}`);
+  };
+
   if (!bootComplete) {
     const progress = Math.round((BOOT_STEPS[bootPhase].at / BOOT_STEPS[BOOT_STEPS.length - 1].at) * 100);
-    return <main className="terminal-app boot-app">
+    return <main className="terminal-app boot-app mesh-app">
       <header className="terminal-header"><div className="brand-lockup"><span className="brand-glyph">✣</span><div><strong>SEED OS</strong><span>FIRMWARE // COLD START</span></div></div><div className="header-readout"><span>POST: <b>ACTIVE</b></span><span>BUS: <b>LOCKED</b></span><span>PHASE: <b>{String(bootPhase + 1).padStart(2, "0")}/06</b></span></div></header>
-      <section className="boot-window"><div className="boot-title"><span>SEED FIRMWARE // HARDWARE INITIALIZATION</span><span>NO USER SESSION</span></div><div className="boot-output">{bootLines.map((line, indexLine) => <div key={`${indexLine}-${line.text}`} className={`terminal-line tone-${line.tone ?? "output"}`}><span className="line-prefix">{line.tone === "error" ? "!" : line.tone === "amber" ? "~" : "·"}</span><span>{line.text || "\u00a0"}</span></div>)}<div className="boot-progress"><span style={{ width: `${progress}%` }} /></div><div className="boot-progress-label">POST {String(progress).padStart(3, "0")}% :: COMMAND BUS LOCKED</div></div></section>
+      <div className="terminal-warning boot-warning"><span>● FIRMWARE STATE / NO USER SESSION</span><span className="warning-text">! IDENTITY HASH UNRESOLVED</span><span>VFS: READ_ONLY / BUS: LOCKED</span></div>
+      <section className="evidence-mesh boot-evidence-mesh" aria-label="Seed OS pre-session evidence mesh">
+        <aside className="mesh-panel matter-index boot-matter"><div className="mesh-panel-title"><span>MATTER INDEX</span><span>UNMOUNTED</span></div><div className="boot-static-index"><span className="signal-good">▱ /ship</span><span className="signal-amber">▱ /recovery</span><span className="signal-red">× /cryo601</span><span>· crew.registry</span><span>· neural.buffer</span></div><div className="mesh-index-stats"><span>VFS WAIT</span><span>BAD 03</span><span className="signal-amber">LINK OFF</span></div></aside>
+        <section className="boot-window boot-command-channel"><div className="boot-title"><span>SEED FIRMWARE // HARDWARE INITIALIZATION</span><span>NO USER SESSION</span></div><div className="boot-output">{bootLines.map((line, indexLine) => <div key={`${indexLine}-${line.text}`} className={`terminal-line tone-${line.tone ?? "output"}`}><span className="line-prefix">{line.tone === "error" ? "!" : line.tone === "amber" ? "~" : "·"}</span><span>{line.text || "\u00a0"}</span></div>)}<div className="boot-progress"><span style={{ width: `${progress}%` }} /></div><div className="boot-progress-label">POST {String(progress).padStart(3, "0")}% :: COMMAND BUS LOCKED</div></div></section>
+        <aside className="mesh-panel connection-lens boot-lens"><div className="mesh-panel-title"><span>CONNECTION LENS</span><span>LOCKED</span></div><div className="boot-lens-body"><span className="lens-extension signal-red">NULL</span><strong>NEURAL BUFFER</strong><small>CAPSULE_601 / owner: unresolved</small><div className="boot-lens-readout"><span>ACCESS <b className="signal-amber">GUEST</b></span><span>INTEGRITY <b className="signal-red">PARTIAL</b></span><span>TRACE <b className="signal-amber">PENDING</b></span></div><p>Projection lens awaits a mounted VFS object.</p></div></aside>
+      </section>
       <footer className="terminal-footer"><span>SEED OS v0.9.1</span><span>FIRMWARE / POST</span><span>STDIN OFFLINE</span></footer>
     </main>;
   }
 
-  return <main className="terminal-app" onClick={() => inputRef.current?.focus()}>
+  return <main className="terminal-app mesh-app" onClick={() => inputRef.current?.focus()}>
     <header className="terminal-header"><div className="brand-lockup"><span className="brand-glyph">✣</span><div><strong>SEED OS</strong><span>SEED FIRMWARE // FALLBACK SHELL</span></div></div><div className="header-readout"><span>VFS: <b>READ_ONLY</b></span><span>PASSENGERS: <b>600</b></span><span>O2: <b className="danger">{runtime.oxygen.toFixed(1)}%</b></span></div></header>
     <div className="terminal-warning"><span>● {runtime.authenticatedUsers.at(-1) ?? "GUEST SESSION"} / {runtime.boot} SHELL</span><span className="warning-text">! NEURAL_BUFFER_CORRUPTED</span><span>FAMILY INDEX: 150 / LANGUAGE TABLE: 08</span></div>
-    <section className="terminal-window">
-      <div className="terminal-title"><span>SEED COMMAND INTERPRETER</span><span>PID 0001 // LOCAL EXECUTION</span></div>
-      <div className="terminal-output" ref={outputRef}>{lines.map((line, indexLine) => <div key={`${indexLine}-${line.text}`} className={`terminal-line tone-${line.tone ?? "output"}`}><span className="line-prefix">{line.tone === "error" ? "!" : line.tone === "amber" ? "~" : line.tone === "prompt" ? ">" : "·"}</span><span>{line.text || "\u00a0"}</span></div>)}<div className="terminal-cursor-line"><span>{prompt(cwd, "", runtime)}</span><i /></div></div>
-      <form className="terminal-input-row" onSubmit={submit}><span>{prompt(cwd, "", runtime)}</span><input ref={inputRef} value={command} onChange={(event) => setCommand(event.target.value)} onKeyDown={onKeyDown} autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Seed OS command input" /><button type="submit">EXEC</button></form>
+    <section className="evidence-mesh" aria-label="Seed OS evidence mesh">
+      <aside className="mesh-panel matter-index" aria-label="Matter Index">
+        <div className="mesh-panel-title"><span>MATTER INDEX</span><span>VFS / PATH</span></div>
+        <div className="mesh-path"><span>{cwd}</span><b>{String(directoryEntries.length).padStart(2, "0")} NODES</b></div>
+        <div className="mesh-directory" role="list">
+          {cwd !== "/" && <button type="button" className="mesh-entry parent-entry" onClick={() => executeCommand("CD ..")}><span className="entry-mark">↶</span><span>../</span><small>RETURN</small></button>}
+          {directoryEntries.map((entry) => <button type="button" className={`mesh-entry ${entry.type === "dir" ? "is-directory" : ""} ${entry.file?.path === focusPath ? "is-focused" : ""}`} key={`${entry.type}-${entry.name}`} onClick={() => inspectEntry(entry)} role="listitem" aria-label={`${entry.type === "dir" ? "Abrir diretório" : "Inspecionar arquivo"} ${entry.name}`}>
+            <span className="entry-mark">{entry.type === "dir" ? "▱" : entry.file?.extension === ".MUS" ? "≋" : entry.file?.extension === ".BOOK" ? "▤" : entry.file?.integrity === "CORRUPTED" ? "×" : "·"}</span>
+            <span className="entry-name">{entry.name}{entry.type === "dir" ? "/" : ""}</span>
+            <small>{entry.type === "dir" ? "SECTOR" : entry.file?.extension}</small>
+          </button>)}
+        </div>
+        <div className="mesh-index-stats"><span>VOLUMES {runtime.mountedVolumes.length}</span><span>FILES {runtimeIndex.files.length}</span><span className={runtime.network === "STABLE" ? "signal-good" : "signal-amber"}>NET {runtime.network}</span></div>
+      </aside>
+
+      <section className="terminal-window command-channel">
+        <div className="terminal-title"><span>COMMAND CHANNEL // {cwd}</span><span>PID 0001 // LOCAL EXECUTION</span></div>
+        <div className="terminal-output" ref={outputRef}>{lines.map((line, indexLine) => <div key={`${indexLine}-${line.text}`} className={`terminal-line tone-${line.tone ?? "output"}`}><span className="line-prefix">{line.tone === "error" ? "!" : line.tone === "amber" ? "~" : line.tone === "prompt" ? ">" : "·"}</span><span>{line.text || "\u00a0"}</span></div>)}<div className="terminal-cursor-line"><span>{prompt(cwd, "", runtime)}</span><i /></div></div>
+        <form className="terminal-input-row" onSubmit={submit}><span>{prompt(cwd, "", runtime)}</span><input ref={inputRef} value={command} onChange={(event) => setCommand(event.target.value)} onKeyDown={onKeyDown} autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Seed OS command input" /><button type="submit">EXEC</button></form>
+      </section>
+
+      <aside className="mesh-panel connection-lens" aria-label="Connection Lens">
+        <div className="mesh-panel-title"><span>CONNECTION LENS</span><span>FOCUS / 01</span></div>
+        {activeFile ? <>
+          <div className="lens-identity"><span className="lens-extension">{activeFile.extension}</span><div><strong>{activeFile.name}</strong><span>{activeFile.layer} // {activeFile.language}</span></div></div>
+          <div className="lens-summary">{activeFile.summary}</div>
+          <dl className="lens-metadata"><div><dt>PATH</dt><dd>{activeFile.path}</dd></div><div><dt>ACCESS</dt><dd className={selectedReadable ? "signal-good" : "signal-amber"}>{selectedReadable ? "MOUNTED" : `REQUIRES ${activeFile.clearance}`}</dd></div><div><dt>INTEGRITY</dt><dd className={activeFile.integrity === "CLEAN" || !activeFile.integrity ? "signal-good" : activeFile.integrity === "ENCRYPTED" ? "signal-amber" : "signal-red"}>{activeFile.integrity ?? "CLEAN"}</dd></div><div><dt>REVISION</dt><dd>{activeFile.updated}</dd></div></dl>
+          <button type="button" className="lens-action" onClick={() => executeCommand(`OPEN ${activeFile.path}`)}><span>↳</span> PROJECT TO CHANNEL</button>
+          <div className="lens-links-title">RELATION TRACES // {String(visibleLinks.length).padStart(2, "0")}</div>
+          <div className="lens-links">{visibleLinks.length ? visibleLinks.map((link) => <button type="button" className={`trace-link signal-${link.signal ?? "clear"}`} key={`${link.label}-${link.target}`} onClick={() => traceLink(link.target)}><span>{link.relation}</span><strong>{link.label}</strong><small>{link.target}</small></button>) : <div className="trace-empty">No related traces indexed for this record.</div>}</div>
+        </> : <div className="lens-empty">No VFS object is fixed to this lens. Select a trace from the Matter Index.</div>}
+      </aside>
+    </section>
+    <section className="instrument-rail" aria-label="Seed OS instruments">
+      <div className="rail-label"><span>INSTRUMENT BUS</span><b>LOCAL</b></div>
+      <div className="audio-instrument"><span className="instrument-glyph">≋</span><div><strong>{runtime.audio.title ?? "AUDIO CHANNEL / IDLE"}</strong><small>{runtime.audio.path ?? "No .MUS container attached to /dev/audio0"}</small></div><span className={`audio-state state-${runtime.audio.status.toLowerCase()}`}>{runtime.audio.status}</span>{runtime.audio.path && <button type="button" onClick={() => executeCommand(runtime.audio.status === "PLAYING" ? "PAUSE" : "RESUME")}>{runtime.audio.status === "PLAYING" ? "HOLD" : "FLOW"}</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("STOP")}>CUT</button>}</div>
+      <div className="app-instruments">{appFiles.length ? appFiles.map((app) => <button type="button" key={app.path} className="app-instrument" onClick={() => executeCommand(`RUN ${app.path}`)}><span>◫</span><strong>{app.name.replace(".PROC", "")}</strong><small>RUN</small></button>) : <span className="app-absence">NO REGISTERED .PROC INSTRUMENTS</span>}</div>
     </section>
     <audio ref={audioRef} preload="metadata" aria-label="Seed OS audio device" />
     <footer className="terminal-footer"><span>SEED OS v0.9.1</span><span>{runtime.boot} / {runtime.network}</span><span>AUDIO: {runtime.audio.status}</span><span>{activeFile?.extension ?? ".SYS"} // {runtime.authority}</span></footer>

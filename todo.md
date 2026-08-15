@@ -2,7 +2,12 @@
 
 ## Próxima iteração
 
-- [ ] Executar `pnpm check` e build de produção.
+- [x] Definir uma gramática visual própria do Seed OS para ponteiro, foco, seleção, abertura e profundidade, sem emular desktop, janelas ou menus de Windows, macOS ou Linux.
+- [x] Construir uma superfície gráfica diegética em torno do terminal persistente, com navegação espacial por arquivos, evidências e subsistemas sem criar uma interface externa ao universo.
+- [x] Mapear ações gráficas de mouse e teclado para os mesmos caminhos e permissões do VFS, mantendo comando e clique semanticamente equivalentes.
+- [x] Integrar player `.MUS`, leitor de arquivos, mensageria e aplicativos `.PROC` a instrumentos visuais próprios, com estado, falhas e limites herdados do Seed OS.
+- [x] Projetar comportamento responsivo para mouse, toque e teclado, preservando densidade investigativa e sem converter a experiência em um painel convencional.
+- [x] Executar `pnpm check` e build de produção.
 - [ ] Inspecionar logs de desenvolvimento, console do navegador e requisições após boot e interação.
 - [ ] Verificar a sequência de boot, bloqueio do prompt e entrada no fallback shell.
 - [ ] Testar `PWD`, `LS`, `DIR`, `CD`, `CAT`, `TYPE`, `OPEN`, `TREE`, `FIND` e `SEARCH` com caminhos válidos e inválidos.

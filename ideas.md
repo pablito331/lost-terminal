@@ -60,3 +60,16 @@ O símbolo é um cursor quadrado atravessando uma semente orbital: três cortes 
 ### Signature Brand Color
 **Phosphor Green `#8CFF68`** — a cor dos dados que ainda respondem, com brilho suficiente para guiar sem transformar tudo em neon.
 
+## Decisão de Interface Gráfica — Malha de Evidências
+
+A superfície gráfica do Seed OS não será um desktop, conjunto de janelas ou menu de aplicativos. Ela será uma **malha de evidências**: três campos operacionais persistentes que representam o mesmo VFS por pontos de vista distintos. À esquerda, o **Mapa de Matéria** expõe diretórios, extensões, volumes e artefatos fixados como estratos de sinal. No centro, o **Canal de Comando** preserva o shell, o histórico e o prompt como a única via de escrita explícita. À direita, a **Lente de Conexão** mostra o arquivo em foco, sua proveniência, relações, integridade, clearance e ações seguras de leitura.
+
+O cursor não arrasta janelas. Ele seleciona um traço e o transforma em foco: um clique em arquivo faz a Lente de Conexão mudar e reproduz, no Canal de Comando, a abertura daquele caminho; um clique em relação segue apenas o vínculo já existente no VFS. O player, mensageria e aplicativos surgem como **instrumentos acoplados** à borda inferior, sem flutuar acima da sessão. Seus comandos continuam aparecendo no terminal e seus controles só acionam operações equivalentes já permitidas pelo Seed OS.
+
+A metáfora material é uma bancada de manutenção com película CRT: campos segmentados por trilhas, blocos ANSI, escalas e anéis de leitura, não cartões arredondados. Foco vivo recebe fósforo verde; permissões parciais aparecem em âmbar; corrupção e perda usam vermelho queimado. O comportamento é instantâneo nos comandos e tátil no mouse, com confirmação visual curta, reduzida em movimento quando necessário.
+
+## Style Decisions
+
+* As três regiões da Malha de Evidências permanecem reconhecíveis durante o boot e nos estados inativos; quando ainda não existem dados de sessão, elas exibem setores bloqueados, índices desmontados e erros de resolução em vez de desaparecer.
+* A marca visível dentro do universo continua sendo **SEED OS**. O nome externo do projeto não aparece no boot, no shell nem em arquivos diegéticos, pois isso diluiria a ficção operacional estabelecida.
+* O contraste de densidade será reforçado por caminhos, rótulos de clearance, estados de integridade, setores e traços de relação. Verde fósforo significa dado vivo; âmbar sinaliza permissão parcial ou sistema aquecido; vermelho queimado representa corrupção, perda ou falha irreversível.
