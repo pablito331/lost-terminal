@@ -54,7 +54,7 @@
 - [x] Separar arquivos executáveis `.PROC` de processos ativos, com PID, estado, memória, portas, arquivos abertos e dispositivo de saída.
 - [x] Definir APIs internas para VFS, áudio, tradução, input, relógio, telemetria, permissões e estado da nave.
 - [x] Implementar um player nativo que abra arquivos `.MUS` dentro do Seed OS e mantenha reprodução em segundo plano.
-- [ ] Implementar um tradutor nativo capaz de ler arquivos pessoais em idiomas maternos e produzir uma camada temporária de interpretação.
+- [ ] Implementar um tradutor nativo capaz de ler arquivos pessoais em idiomas maternos e produzir uma camada temporária de interpretação; o protótipo cobre oito idiomas e vários payloads, mas ainda precisa de interpretação substantiva de conteúdo real.
 - [ ] Modelar jogos e utilitários como aplicações reais do sistema, sem revelar objetivos ou linguagem externa de jogo.
 - [x] Criar uma biblioteca diegética em `/library` com livros técnicos, científicos, históricos e operacionais em múltiplos idiomas.
 - [x] Indexar livros por idioma, assunto, autor, departamento, nível, revisão, acesso e referências cruzadas sem transformar a biblioteca em um menu de objetivos.
@@ -232,10 +232,10 @@
 - [x] Adicionar busca contextual por campos (type, person, terminal, department, time, keyword, contradiction) ao dispatcher FIND/SEARCH.
 - [x] Adicionar auditoria pura de schema documental, cobertura de campos e inventário pessoal, com testes Vitest.
 - [x] Implementar bloqueio temporário de contas por ciclos do Seed OS, expiração persistente em snapshots e aviso técnico no buffer SYSLOG.
-- [x] Validar TypeScript, suíte Vitest, auditorias Seed OS, matriz de comandos e build de produção após reinicialização do servidor.
+- [x] Validar TypeScript, suíte Vitest, auditorias Seed OS, matriz de comandos e build de produção após reinicialização do servidor; suíte atualizada para 18 testes.
 
 - [ ] Validar manualmente no navegador o fluxo de reprodução de playlist.MUS após AUTH I.CHEN e PLAY playlist.MUS; autoplay e disponibilidade do canal direto dependem da sessão do navegador.
-- [ ] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade.
+- [ ] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade; `TRANSLATE` aplica hoje uma camada parcial sem contornar clearance, conta ou integridade.
 - [ ] Formalizar isolamento completo de processos .PROC com PID, memória, portas e encerramento seguro.
 - [ ] Adicionar lentes visuais dedicadas para payloads .VIS e .REC no Connection Lens.
 

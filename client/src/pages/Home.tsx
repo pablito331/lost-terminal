@@ -12,6 +12,7 @@ import { compileSeedScript, runSeedScript, SeedScriptEffects } from "@/lib/seedS
 import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleNanoPanel, visibleNanoPanels, NanoPanel } from "@/lib/nanoPanels";
 import { configureLofiGraph } from "@/lib/audioPipeline";
 import { searchSeedFiles } from "@/lib/seedAudit";
+import { translateSeedFile } from "@/lib/seedTranslator";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
@@ -493,6 +494,27 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     if (!member) return result([{ text: `passenger not found: ${arg}`, tone: "error" }]);
     const files = index.files.filter((file) => file.ownerId === member.id);
     return result([{ text: `${member.name} // ${member.handle}`, tone: "system" }, { text: `ID ${member.id} | FAMILY ${member.familyId} | ${member.nationality} | ${member.language}`, tone: "output" }, { text: `${member.role} / ${member.department} / ${member.status}`, tone: "output" }, ...files.map((file) => ({ text: file.path, tone: file.layer === "CORPORATE" ? "dim" as Tone : "output" as Tone }))], { focus: files[0]?.path });
+  }
+  if (["translate", "tr"].includes(normalized)) {
+    const target = resolveFile(index, args[0] ?? arg, cwd);
+    if (!target) return result([{ text: `translate: file not found: ${(args[0] ?? arg) || "<empty>"}`, tone: "error" }]);
+    const hasClearance = clearanceRank[runtime.authority] >= clearanceRank[target.clearance];
+    const hasAccount = Boolean(target.access && runtime.authenticatedUsers.includes(target.access.username));
+    if (!hasClearance && !hasAccount) return result([{ text: `translate: permission denied :: required ${target.clearance}`, tone: "error" }]);
+    if (target.integrity === "CORRUPTED" && !runtime.recoveredPaths.includes(target.path)) return result([{ text: `translate: payload unavailable :: ${target.path}`, tone: "error" }]);
+    const layer = translateSeedFile(target);
+    if (!layer) return result([{ text: `translate: unsupported payload :: ${target.extension}`, tone: "error" }]);
+    return result([
+      { text: `TRANSLATION LAYER :: ${target.path}`, tone: "system" },
+      { text: `SOURCE      :: ${layer.sourceLanguage}`, tone: "dim" },
+      { text: `TARGET      :: ${layer.targetLanguage}`, tone: "output" },
+      { text: `FIDELITY    :: ${layer.fidelity} / ORIGINAL PRESERVED`, tone: "amber" },
+      { text: "", tone: "dim" },
+      ...layer.interpretedLines.map((text) => ({ text, tone: "output" as Tone })),
+      { text: "", tone: "dim" },
+      { text: "SOURCE PAYLOAD // READ-ONLY", tone: "system" },
+      ...layer.originalLines.map((text) => ({ text, tone: "dim" as Tone })),
+    ], { focus: target.path });
   }
   if (normalized === "languages" || normalized === "lang") {
     const counts = index.crew.reduce<Record<string, number>>((acc, member) => { acc[member.language] = (acc[member.language] ?? 0) + 1; return acc; }, {});
