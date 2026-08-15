@@ -10,6 +10,7 @@ import { loadSeedSession, saveSeedSession } from "@/lib/seedPersistence";
 import { createInitialShipSystems, repairGenerator, repairLifeSupport, ShipSystemsState, tickShipSystems } from "@/lib/shipSystems";
 import { compileSeedScript, runSeedScript, SeedScriptEffects } from "@/lib/seedScript";
 import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleNanoPanel, visibleNanoPanels, NanoPanel } from "@/lib/nanoPanels";
+import { configureLofiGraph } from "@/lib/audioPipeline";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
@@ -21,7 +22,7 @@ type SeedWorkspaceProgram = { path: string; code: string[]; compiled: boolean; c
 type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; workspacePrograms: SeedWorkspaceProgram[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
 type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
-const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: false }, systems: createInitialShipSystems() };
+const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -179,7 +180,7 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
         title: runtime.audio?.title ?? audioPayload?.title,
         artist: runtime.audio?.artist ?? audioPayload?.artist,
         duration: runtime.audio?.duration ?? audioPayload?.duration,
-        lofi: Boolean(runtime.audio?.lofi),
+        lofi: true,
       },
     },
     history: Array.isArray(snapshot.history) ? snapshot.history.filter((entry): entry is string => typeof entry === "string").slice(-80) : [],
@@ -263,7 +264,6 @@ function helpLines(): TerminalLine[] {
     { text: "PLAY <file.MUS>       attach a music container to /dev/audio0", tone: "amber" },
     { text: "PAUSE / RESUME        control the active audio process", tone: "amber" },
     { text: "STOP                  terminate the active audio process", tone: "amber" },
-    { text: "LOFI                  toggle low-fidelity audio processing", tone: "amber" },
     { text: "AUDIO / PLAYER        inspect audio process and device state", tone: "output" },
     { text: "RUN / EXEC / START    execute a .PROC program", tone: "amber" },
     { text: "EDIT <path>            open or modify a Seed Script workspace", tone: "amber" },
@@ -461,13 +461,8 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
     const hasAccount = Boolean(target.access && runtime.authenticatedUsers.includes(target.access.username));
     if (!hasClearance && !hasAccount) return result([{ text: `play: permission denied :: required ${target.clearance}`, tone: "error" }]);
     if (target.integrity === "CORRUPTED" && !runtime.recoveredPaths.includes(target.path)) return result([{ text: `play: container unreadable :: ${target.path}`, tone: "error" }]);
-    const audio: AudioState = { path: target.path, source: target.payload.mediaSrc, title: target.payload.title ?? target.name, artist: target.payload.artist, duration: target.payload.duration, status: target.payload.remoteEmbed ? "REMOTE" : target.payload.mediaSrc ? "PLAYING" : "SOURCE_MISSING", position: 0, lofi: false };
+    const audio: AudioState = { path: target.path, source: target.payload.mediaSrc, title: target.payload.title ?? target.name, artist: target.payload.artist, duration: target.payload.duration, status: target.payload.remoteEmbed ? "REMOTE" : target.payload.mediaSrc ? "PLAYING" : "SOURCE_MISSING", position: 0, lofi: true };
     return result([{ text: `AUDIO OPEN :: ${target.path}`, tone: "system" }, { text: `DEVICE     :: /dev/audio0`, tone: "output" }, { text: `CONTAINER  :: ${target.payload.codec ?? "SEED-AUDIO"}`, tone: "dim" }, { text: target.payload.remoteEmbed ? "PLAYBACK   :: REMOTE CONTAINER / PRIVATE CHANNEL" : target.payload.mediaSrc ? `PLAYBACK   :: ${audio.title ?? "UNNAMED"}` : "SOURCE    :: NOT MOUNTED / metadata only", tone: target.payload.remoteEmbed || target.payload.mediaSrc ? "amber" : "dim" }], { nextRuntime: { ...runtime, audio } });
-  }
-  if (normalized === "lofi") {
-    if (!runtime.audio.path) return result([{ text: "lofi: no active audio process", tone: "error" }]);
-    const lofi = !runtime.audio.lofi;
-    return result([{ text: `LO-FI FILTER :: ${lofi ? "ENGAGED" : "BYPASSED"}`, tone: lofi ? "amber" : "output" }], { nextRuntime: { ...runtime, audio: { ...runtime.audio, lofi } } });
   }
   if (["pause", "resume", "stop"].includes(normalized)) {
     if (!runtime.audio.path) return result([{ text: `audio: no active process :: ${normalized}`, tone: "error" }]);
@@ -612,6 +607,7 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const audioGraphRef = useRef<{ context: AudioContext; source: MediaElementAudioSourceNode; lowpass: BiquadFilterNode; compressor: DynamicsCompressorNode; gain: GainNode } | null>(null);
   const [storageReady, setStorageReady] = useState(false);
   const restoredRef = useRef(false);
   const pendingSnapshotRef = useRef<SessionSnapshot | null>(null);
@@ -677,11 +673,45 @@ export default function Home() {
   useEffect(() => {
     const element = audioRef.current;
     if (!element) return;
-    if (!bootComplete || !runtime.audio.source || !runtime.audio.path || runtime.audio.status === "REMOTE") { element.pause(); return; }
-    if (element.dataset.path !== runtime.audio.path) { element.src = runtime.audio.source; element.dataset.path = runtime.audio.path; element.currentTime = runtime.audio.position; }
-    if (runtime.audio.status === "PLAYING") void element.play().catch(() => undefined);
-    else element.pause();
+    if (!bootComplete || !runtime.audio.source || !runtime.audio.path || runtime.audio.status === "REMOTE") {
+      element.pause();
+      return;
+    }
+    if (element.dataset.path !== runtime.audio.path) {
+      element.src = runtime.audio.source;
+      element.dataset.path = runtime.audio.path;
+      element.currentTime = runtime.audio.position;
+    }
+    const AudioContextCtor = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextCtor && !audioGraphRef.current) {
+      const context = new AudioContextCtor();
+      const source = context.createMediaElementSource(element);
+      const lowpass = context.createBiquadFilter();
+      const compressor = context.createDynamicsCompressor();
+      const gain = context.createGain();
+      configureLofiGraph(lowpass, compressor, gain);
+      source.connect(lowpass).connect(compressor).connect(gain).connect(context.destination);
+      audioGraphRef.current = { context, source, lowpass, compressor, gain };
+    }
+    if (runtime.audio.status === "PLAYING") {
+      const graphContext = audioGraphRef.current?.context;
+      if (graphContext?.state === "suspended") void graphContext.resume();
+      void element.play().catch(() => undefined);
+    } else {
+      element.pause();
+    }
   }, [bootComplete, runtime.audio]);
+  useEffect(() => () => {
+    const graph = audioGraphRef.current;
+    if (graph) {
+      graph.source.disconnect();
+      graph.lowpass.disconnect();
+      graph.compressor.disconnect();
+      graph.gain.disconnect();
+      void graph.context.close();
+      audioGraphRef.current = null;
+    }
+  }, []);
 
   const executeCommand = (rawInput: string) => {
     const raw = rawInput.trim();
@@ -794,7 +824,7 @@ export default function Home() {
     </section>
     <section className="instrument-rail" aria-label="Seed OS instruments">
       <div className="rail-label"><span>INSTRUMENT BUS</span><b>LOCAL</b></div>
-      <div className="audio-instrument"><span className="instrument-glyph">≋</span><div><strong>{runtime.audio.title ?? "AUDIO CHANNEL / IDLE"}</strong><small>{runtime.audio.path ?? "No .MUS container attached to /dev/audio0"}</small></div><span className={`audio-state state-${runtime.audio.status.toLowerCase()}`}>{runtime.audio.status}</span>{runtime.audio.path && <button type="button" onClick={() => executeCommand(runtime.audio.status === "PLAYING" ? "PAUSE" : "RESUME")}>{runtime.audio.status === "PLAYING" ? "HOLD" : "FLOW"}</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("STOP")}>CUT</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("LOFI")}>{runtime.audio.lofi ? "RAW" : "LO-FI"}</button>}{runtime.audio.status === "REMOTE" && <span className="remote-audio-note">REMOTE CHANNEL / MASKED</span>}</div>{runtime.audio.status === "REMOTE" && runtime.audio.path && (() => { const remote = runtimeIndex.fileMap.get(runtime.audio.path.toLowerCase())?.payload; return remote?.kind === "audio" && remote.remoteEmbed ? <iframe className="remote-audio-frame" title="Seed OS remote audio channel" src={remote.remoteEmbed} allow="autoplay; encrypted-media" /> : null; })()}
+      <div className="audio-instrument"><span className="instrument-glyph">≋</span><div><strong>{runtime.audio.title ?? "AUDIO CHANNEL / IDLE"}</strong><small>{runtime.audio.path ?? "No .MUS container attached to /dev/audio0"}</small></div><span className={`audio-state state-${runtime.audio.status.toLowerCase()}`}>{runtime.audio.status}</span>{runtime.audio.path && <button type="button" onClick={() => executeCommand(runtime.audio.status === "PLAYING" ? "PAUSE" : "RESUME")}>{runtime.audio.status === "PLAYING" ? "HOLD" : "FLOW"}</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("STOP")}>CUT</button>}{runtime.audio.status === "REMOTE" && <span className="remote-audio-note">REMOTE CHANNEL / MASKED</span>}</div>{runtime.audio.status === "REMOTE" && runtime.audio.path && (() => { const remote = runtimeIndex.fileMap.get(runtime.audio.path.toLowerCase())?.payload; return remote?.kind === "audio" && remote.remoteEmbed ? <iframe className="remote-audio-frame" title="Seed OS remote audio channel" src={remote.remoteEmbed} allow="autoplay; encrypted-media" /> : null; })()}
       <div className="app-instruments">{appFiles.length ? appFiles.map((app) => <button type="button" key={app.path} className="app-instrument" onClick={() => executeCommand(`RUN ${app.path}`)}><span>◫</span><strong>{app.name.replace(".PROC", "")}</strong><small>ATTACH</small></button>) : <span className="app-absence">NO REGISTERED .PROC INSTRUMENTS</span>}</div>
     </section>
     <audio ref={audioRef} preload="metadata" aria-label="Seed OS audio device" />

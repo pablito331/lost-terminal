@@ -195,3 +195,13 @@
 - [x] Implementar o nano painel do player.
 - [ ] Validar manualmente a reprodução e o modo LO-FI após `AUTH I.CHEN` e `PLAY playlist.MUS`.
 - [ ] Criar checkpoint final.
+
+
+## Pipeline LO-FI oculto
+
+- [x] Remover o controle visível de LO-FI do nano player e tratar o efeito como parte fixa do pipeline de áudio.
+- [x] Aplicar o tratamento automático a todas as músicas `.MUS`, tanto locais quanto remotas, sem alterar o manifesto ou a identidade diegética das faixas.
+- [x] Definir uma cadeia sonora segura com filtro passa-baixas e compressão moderada, respeitando limites do Web Audio.
+- [x] Tratar fontes cross-origin sem acesso ao áudio bruto: manter o embed funcional sem alegar processamento de áudio que a origem não permite.
+- [x] Garantir que autoplay bloqueado, erro de origem e ausência de faixa não quebrem o terminal nem exponham a origem externa.
+- [x] Cobrir o pipeline com testes unitários e validar que nenhum controle ou metadado técnico do filtro aparece no painel.
