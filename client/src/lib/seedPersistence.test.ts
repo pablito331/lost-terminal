@@ -3,7 +3,7 @@ import { decodeSeedSession, encodeSeedSession } from "./seedPersistence";
 
 describe("Seed session transfer envelope", () => {
   it("round-trips UTF-8 snapshot data without browser storage", () => {
-    const payload = { version: 1, cwd: "/personal/é", lines: ["██", "neural_buffer_corrupted"] };
+    const payload = { version: 1, cwd: "/personal/é", openFiles: ["/personal/é/diary.SCR"], translation: { path: "/personal/é/diary.SCR", sourceLanguage: "fr-FR", targetLanguage: "SEED-OPS", fidelity: "CONTEXTUAL", translatedAt: 42 }, lines: ["██", "neural_buffer_corrupted"] };
     const encoded = encodeSeedSession(payload);
     expect(encoded.startsWith("SEED_SESSION_V1:")).toBe(true);
     expect(decodeSeedSession<typeof payload>(encoded)).toEqual(payload);

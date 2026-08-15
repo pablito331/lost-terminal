@@ -13,6 +13,7 @@ import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleN
 import { configureLofiGraph } from "@/lib/audioPipeline";
 import { searchSeedFiles } from "@/lib/seedAudit";
 import { translateSeedFile } from "@/lib/seedTranslator";
+import { processCanUse, SeedProcess, spawnSeedProcess, stopSeedProcess } from "@/lib/seedProcess";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
@@ -21,10 +22,11 @@ type FirmwareFlags = { maintenancePort: boolean; ghostBus: boolean; cryo601: boo
 type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "REMOTE" | "SOURCE_MISSING"; position: number; lofi: boolean };
 type InstalledApp = { sourcePath: string; installedPath: string; installedAt: string; owner?: string };
 type SeedWorkspaceProgram = { path: string; code: string[]; compiled: boolean; compiledAt?: string };
-type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; workspacePrograms: SeedWorkspaceProgram[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; lockedUntil: Record<string, number>; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
+type TranslationState = { path: string; sourceLanguage: string; targetLanguage: string; fidelity: string; translatedAt: number };
+type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; workspacePrograms: SeedWorkspaceProgram[]; processes: SeedProcess[]; openFiles: string[]; translation?: TranslationState; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; lockedUntil: Record<string, number>; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
 type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
-export const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], lockedUntil: {}, recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
+export const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], processes: [], openFiles: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], lockedUntil: {}, recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -166,6 +168,9 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
       ...runtime,
       installedApps: Array.isArray(runtime.installedApps) ? runtime.installedApps.filter((app) => Boolean(app && typeof app.sourcePath === "string" && typeof app.installedPath === "string")) : [],
       workspacePrograms,
+      processes: Array.isArray(runtime.processes) ? runtime.processes.filter((process): process is SeedProcess => Boolean(process && typeof process.pid === "number" && typeof process.path === "string" && Array.isArray(process.ports) && Array.isArray(process.openFiles) && Array.isArray(process.capabilities))).map((process) => ({ ...process, state: ["RUNNING", "PAUSED", "CRASHED", "EXITED"].includes(process.state) ? process.state : "CRASHED" })) : [],
+      openFiles: Array.isArray(runtime.openFiles) ? runtime.openFiles.filter((path): path is string => typeof path === "string").slice(-32) : [],
+      translation: runtime.translation && typeof runtime.translation.path === "string" ? { path: runtime.translation.path, sourceLanguage: String(runtime.translation.sourceLanguage ?? "UNKNOWN"), targetLanguage: String(runtime.translation.targetLanguage ?? "SEED-OPS"), fidelity: String(runtime.translation.fidelity ?? "PARTIAL"), translatedAt: typeof runtime.translation.translatedAt === "number" ? runtime.translation.translatedAt : 0 } : undefined,
       lockedUntil: runtime.lockedUntil && typeof runtime.lockedUntil === "object" ? Object.fromEntries(Object.entries(runtime.lockedUntil).filter(([key, value]) => typeof key === "string" && typeof value === "number")) : {},
       firmware: { ...initialRuntime.firmware, ...(runtime.firmware ?? {}) },
       nvram: { ...initialRuntime.nvram, ...(runtime.nvram ?? {}) },
@@ -365,7 +370,7 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     if (mode === "OPEN") {
       const file = resolveFile(index, args.slice(1).join(" "), cwd);
       if (!file || file.extension !== ".MSG" || file.payload.kind !== "message") return result([{ text: `msg: message not found: ${args.slice(1).join(" ") || "<empty>"}`, tone: "error" }]);
-      return result(openLines(file, index, runtime), { focus: file.path });
+      return result(openLines(file, index, runtime), { focus: file.path, nextRuntime: { ...runtime, openFiles: Array.from(new Set([...runtime.openFiles, file.path])).slice(-32) } });
     }
     const channel = mode === "GHOST" ? "GHOST" : "OFFICIAL";
     const messages = index.files.filter((file) => file.extension === ".MSG" && file.payload.kind === "message" && file.payload.channel === channel).slice(0, 48);
@@ -464,7 +469,7 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
   }
   if (["cat", "type", "open"].includes(normalized)) {
     const file = resolveFile(index, arg, cwd);
-    return file ? result(openLines(file, index, runtime), { focus: file.path }) : result([{ text: `open: file not found: ${arg || "<empty>"}`, tone: "error" }]);
+    return file ? result(openLines(file, index, runtime), { focus: file.path, nextRuntime: { ...runtime, openFiles: Array.from(new Set([...runtime.openFiles, file.path])).slice(-32) } }) : result([{ text: `open: file not found: ${arg || "<empty>"}`, tone: "error" }]);
   }
   if (["find", "search"].includes(normalized)) {
     const found = searchSeedFiles(index, arg);
@@ -514,7 +519,7 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
       { text: "", tone: "dim" },
       { text: "SOURCE PAYLOAD // READ-ONLY", tone: "system" },
       ...layer.originalLines.map((text) => ({ text, tone: "dim" as Tone })),
-    ], { focus: target.path });
+    ], { focus: target.path, nextRuntime: { ...runtime, openFiles: Array.from(new Set([...runtime.openFiles, target.path])).slice(-32), translation: { path: target.path, sourceLanguage: layer.sourceLanguage, targetLanguage: layer.targetLanguage, fidelity: layer.fidelity, translatedAt: runtime.systems.clock } } });
   }
   if (normalized === "languages" || normalized === "lang") {
     const counts = index.crew.reduce<Record<string, number>>((acc, member) => { acc[member.language] = (acc[member.language] ?? 0) + 1; return acc; }, {});
@@ -550,6 +555,18 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     const nextRuntime = { ...runtime, credentials: Array.from(new Set([...runtime.credentials, credential.payload.service])) };
     return result([{ text: `credential accepted :: ${credential.payload.service}`, tone: "amber" }, { text: `target available :: ${credential.payload.target}`, tone: "system" }], { nextRuntime });
   }
+  if (["ps", "processes", "proc"].includes(normalized)) {
+    const active = runtime.processes.filter((process) => process.state !== "EXITED");
+    const processLines: TerminalLine[] = active.length ? active.map((process): TerminalLine => ({ text: `${String(process.pid).padStart(4, "0")} ${process.state.padEnd(7)} MEM ${String(process.memory).padStart(2, "0")}MB PORTS ${(process.ports.join(",") || "-").padEnd(8)} ${process.path}`, tone: (process.state === "CRASHED" ? "error" : "output") as Tone })) : [{ text: "NO ACTIVE PROCESSES", tone: "dim" }];
+    return result([{ text: "SEED PROCESS TABLE", tone: "system" }, ...processLines]);
+  }
+  if (["kill", "terminate", "stop"].includes(normalized)) {
+    const pid = Number(args[0]);
+    const process = runtime.processes.find((candidate) => candidate.pid === pid);
+    if (!process) return result([{ text: `proc: pid not found :: ${args[0] || "<empty>"}`, tone: "error" }]);
+    const nextRuntime = { ...runtime, processes: runtime.processes.map((candidate) => candidate.pid === pid ? stopSeedProcess(candidate, 0) : candidate) };
+    return result([{ text: `PROC ${pid} :: EXITED / resources released`, tone: "amber" }], { nextRuntime });
+  }
   if (["run", "exec", "start"].includes(normalized)) {
     const file = resolveAppFile(index, arg, cwd);
     if (!file || file.kind !== "program" || file.payload.kind !== "program") return result([{ text: `run: executable .PROC not found: ${arg || "<empty>"}`, tone: "error" }]);
@@ -576,7 +593,8 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
       };
       const execution = runSeedScript(workspace.code, { read: scriptRead, repair: scriptRepair });
       const effect = execution.effects as SeedScriptEffects;
-      const nextRuntime = { ...runtime, energy: Math.max(0, Math.min(100, runtime.energy + (effect.energy ?? 0))), oxygen: Math.max(0, Math.min(100, runtime.oxygen + (effect.oxygen ?? 0))), hull: Math.max(0, Math.min(100, runtime.hull + (effect.hull ?? 0))), network: effect.network ?? runtime.network, systems: scriptSystems, services: effect.service ? Array.from(new Set([...runtime.services, effect.service])) : runtime.services };
+      const process = spawnSeedProcess(runtime.processes, { path: file.path, memory: 8, openFiles: [file.path], outputDevice: "/dev/stdout", capabilities: ["VFS_READ", ...(runtime.firmware.maintenancePort ? ["MAINTENANCE_WRITE"] : [])] }, runtime.systems.clock);
+      const nextRuntime = { ...runtime, processes: [...runtime.processes, process], energy: Math.max(0, Math.min(100, runtime.energy + (effect.energy ?? 0))), oxygen: Math.max(0, Math.min(100, runtime.oxygen + (effect.oxygen ?? 0))), hull: Math.max(0, Math.min(100, runtime.hull + (effect.hull ?? 0))), network: effect.network ?? runtime.network, systems: scriptSystems, services: effect.service ? Array.from(new Set([...runtime.services, effect.service])) : runtime.services };
       return result([{ text: `SEED SCRIPT EXEC :: ${file.path}`, tone: "system" }, ...execution.output.map((text) => ({ text, tone: "output" as Tone })), ...execution.errors.map((error) => ({ text: error, tone: "error" as Tone }))], { nextRuntime, focus: file.path });
     }
     if (file.path.toLowerCase() === "/apps/ide.proc") return result([{ text: "SEED IDE 1.0 // WORKBENCH ATTACHED", tone: "system" }, { text: "SOURCE :: /workspace/*.PROC", tone: "output" }, { text: "EDIT <path> [APPEND|CLEAR]", tone: "amber" }, { text: "COMPILE <path> :: syntax / bounds / policy", tone: "amber" }, { text: "RUN <path> :: mediated execution", tone: "amber" }, { text: "INSTALL <path> :: register derived artifact", tone: "dim" }], { focus: file.path });
@@ -586,7 +604,9 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     const missing = (action.requires ?? []).filter((requirement) => !runtime.credentials.includes(requirement) && !runtime.services.includes(requirement) && !(requirement === "BOTANY" && file.ownerId === "passenger-600"));
     if (missing.length) return result([{ text: `execution blocked :: dependency unavailable [${missing.join(", ")}]`, tone: "error" }]);
     const effects = action.effects ?? {};
-    const nextRuntime: RuntimeState = { ...runtime, energy: Math.max(0, runtime.energy + (effects.energy ?? 0)), oxygen: Math.min(100, runtime.oxygen + (effects.oxygen ?? 0)), hull: Math.min(100, runtime.hull + (effects.hull ?? 0)), network: effects.network ?? runtime.network, authority: effects.authority ?? runtime.authority, services: Array.from(new Set([...runtime.services, ...(effects.service ? [effects.service] : [] )])) };
+    const process = spawnSeedProcess(runtime.processes, { path: file.path, memory: file.payload.programType === "GAME" ? 12 : 6, openFiles: [file.path], outputDevice: "/dev/stdout", capabilities: ["VFS_READ", ...(file.payload.action ? ["STATE_MUTATE"] : [])] }, runtime.systems.clock);
+    if (Object.keys(effects).length > 0 && !processCanUse(process, "STATE_MUTATE")) return result([{ text: `execution blocked :: capability STATE_MUTATE unavailable`, tone: "error" }]);
+    const nextRuntime: RuntimeState = { ...runtime, processes: [...runtime.processes, process], openFiles: Array.from(new Set([...runtime.openFiles, file.path])).slice(-32), energy: Math.max(0, runtime.energy + (effects.energy ?? 0)), oxygen: Math.min(100, runtime.oxygen + (effects.oxygen ?? 0)), hull: Math.min(100, runtime.hull + (effects.hull ?? 0)), network: effects.network ?? runtime.network, authority: effects.authority ?? runtime.authority, services: Array.from(new Set([...runtime.services, ...(effects.service ? [effects.service] : [] )])) };
     return result([{ text: `executing ${file.path}`, tone: "system" }, ...action.output.map((text) => ({ text, tone: "output" as Tone }))], { nextRuntime, focus: file.path });
   }
   if (normalized === "echo") return result([{ text: arg, tone: "output" }]);

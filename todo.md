@@ -54,7 +54,7 @@
 - [x] Separar arquivos executáveis `.PROC` de processos ativos, com PID, estado, memória, portas, arquivos abertos e dispositivo de saída.
 - [x] Definir APIs internas para VFS, áudio, tradução, input, relógio, telemetria, permissões e estado da nave.
 - [x] Implementar um player nativo que abra arquivos `.MUS` dentro do Seed OS e mantenha reprodução em segundo plano.
-- [ ] Implementar um tradutor nativo capaz de ler arquivos pessoais em idiomas maternos e produzir uma camada temporária de interpretação; o protótipo cobre oito idiomas e vários payloads, mas ainda precisa de interpretação substantiva de conteúdo real.
+- [x] Implementar um tradutor nativo capaz de ler arquivos pessoais em idiomas maternos e produzir uma camada temporária de interpretação; frases, capítulos, legendas, transcrições e dicas reais em oito idiomas são mapeadas, com fallback identificado.
 - [x] Modelar jogos e utilitários como aplicações reais do sistema, sem revelar objetivos ou linguagem externa de jogo; `UTILITY`, `APPLICATION` e `GAME` agora são payloads `.PROC` reais.
 - [x] Criar uma biblioteca diegética em `/library` com livros técnicos, científicos, históricos e operacionais em múltiplos idiomas.
 - [x] Indexar livros por idioma, assunto, autor, departamento, nível, revisão, acesso e referências cruzadas sem transformar a biblioteca em um menu de objetivos.
@@ -73,9 +73,9 @@
 - [x] Criar níveis de leitura e pré-requisitos naturais, permitindo que a biblioteca seja vasta e parcialmente redundante sem revelar qual documento é necessário.
 - [x] Revisar a continuidade editorial dos livros, mensagens e vídeos contra a cronologia, os personagens, as famílias, os departamentos e as falhas já estabelecidas.
 - [ ] Isolar processos, tratar crash, corrupção, dependências ausentes, versão incompatível e encerramento forçado.
-- [ ] Permitir que aplicações alterem apenas os estados e dispositivos autorizados, respeitando BIOS, autoridade e permissões.
+- [x] Permitir que aplicações alterem apenas os estados e dispositivos autorizados, respeitando BIOS, autoridade e permissões; ações exigem dependências/capacidades e reparos exigem canal de manutenção.
 - [ ] Criar compatibilidade de aplicações entre versões do Seed OS e registros de migração/rollback.
-- [ ] Persistir processos, arquivos abertos, áudio ativo, tradução e efeitos da aplicação dentro da sessão do terminal.
+- [x] Persistir processos, arquivos abertos, áudio ativo, tradução e efeitos da aplicação dentro da sessão do terminal; `processes` entrou no snapshot compatível e `PS/KILL` liberam recursos.
 - [x] Testar o ecossistema com o shell como ponto único de entrada, sem dashboard paralelo ou player externo.
 - [x] Definir a extensão proprietária de música, preferencialmente `.MUS`, separando-a de `.REC` para voz e interceptações.
 - [x] Manter o codec real, duração, taxa, canal, checksum e MIME apenas em metadados internos do Seed OS, sem expor `.mp3`, `.wav` ou `.ogg`.
@@ -117,8 +117,8 @@
 - [x] Ligar a BIOS a arquivos corrompidos, chaves de recuperação, contas ROOT e montagem de payloads recuperáveis.
 - [x] Manter o estado de firmware persistente entre comandos e reinicializações dentro da sessão do terminal.
 - [x] Exibir apenas POST, códigos, flags e mensagens técnicas, sem explicar o motivo narrativo de cada desbloqueio.
-- [ ] Modelar camadas de acesso `GUEST`, `CREW`, `OFFICER`, `ROOT` e subpermissões por usuário, departamento, terminal e serviço.
-- [ ] Criar contas de usuários com identificador, nome, hash parcial, senha possível, salt, status, tentativas e terminal de origem.
+- [x] Modelar camadas de acesso `GUEST`, `CREW`, `OFFICER`, `ROOT` e subpermissões por usuário, departamento, terminal e serviço.
+- [x] Criar contas de usuários com identificador, nome, hash parcial, senha possível, salt, status, tentativas e terminal de origem; credenciais e tentativas estão indexadas no VFS/runtime.
 - [x] Criar arquivos corrompidos com setores ausentes, caracteres inválidos, timestamps quebrados, payloads truncados e caminhos recuperáveis.
 - [x] Implementar respostas técnicas diferentes para senha válida, senha inválida, usuário inexistente, arquivo bloqueado e arquivo corrompido.
 - [x] Registrar tentativas de acesso no VFS e permitir bloqueios temporários, alertas silenciosos e mudanças de autoridade; cobertura validada no fluxo de AUTH e expiração por relógio.
@@ -146,7 +146,7 @@
 - [x] Manter uma linha do tempo coerente, incluindo documentos apagados, sobrescritos ou com horários incompatíveis.
 - [x] Fazer `FIND`/`SEARCH` localizar documentos por tipo, pessoa, terminal, departamento, horário, palavra-chave e contradição; filtros indexados e cobertura determinística adicionada.
 - [x] Usar atas, advertências e memorandos como referências que abrem caminhos, credenciais ou interpretações alternativas — nunca como texto isolado.
-- [ ] Modelar inventário pessoal por passageiro: diário, documento, foto, vídeo, música, jogo, programa, credencial e ferramenta; fotos, jogos e ferramentas ainda precisam ser comprovados.
+- [x] Modelar inventário pessoal por passageiro: diário, documento, foto, vídeo, música, jogo, programa, credencial e ferramenta; manifesto cobre fotos, VIS/REC, MUS, PROC utilitário/jogo, credenciais e snippets.
 - [x] Distinguir arquivos passivos de arquivos executáveis e definir metadados de ação, permissão, dependências e efeitos na nave.
 - [x] Criar um formato seguro para senhas salvas, tokens, códigos e referências contextuais, sem expor credenciais fora do fluxo narrativo.
 - [x] Permitir que programas pessoais sejam abertos com `RUN`, `EXEC`, `START` ou `USE`, retornando utilitários ou alterações de estado.
@@ -235,8 +235,8 @@
 - [x] Validar TypeScript, suíte Vitest, auditorias Seed OS, matriz de comandos e build de produção após reinicialização do servidor; suíte atualizada para 18 testes.
 
 - [ ] Validar manualmente no navegador o fluxo de reprodução de playlist.MUS após AUTH I.CHEN e PLAY playlist.MUS; autoplay e disponibilidade do canal direto dependem da sessão do navegador.
-- [ ] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade; `TRANSLATE` aplica hoje uma camada parcial sem contornar clearance, conta ou integridade.
-- [ ] Formalizar isolamento completo de processos .PROC com PID, memória, portas e encerramento seguro.
+- [x] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade; `TRANSLATE` preserva o payload e herda clearance, conta e integridade.
+- [x] Formalizar isolamento completo de processos `.PROC` com PID, memória, portas e encerramento seguro; núcleo puro, integração no `RUN` e comandos `PS/KILL` validados.
 - [x] Adicionar lentes visuais dedicadas para payloads .VIS e .REC no Connection Lens, com frame trace, telemetria, buffer de transcrição e codec diegético.
 
 - [x] Adicionar testes objetivos para AUTH cobrindo tentativas falhas, bloqueio temporário, expiração por relógio, aviso silencioso e mudança de autoridade após credenciais válidas.
@@ -246,3 +246,6 @@
 - [x] Adicionar bibliotecas de código diegéticas reais no VFS, com snippets de tripulantes ligados a `.PROC` existentes e referências cruzadas.
 - [x] Tornar exemplos quase funcionais completáveis de fato, com lacunas técnicas, dependências, referências e comportamento verificável após reparo/execução.
 - [x] Auditar exemplos completáveis, comprovando biblioteca de código, programa de tripulante e módulo corrompido reparável em testes determinísticos.
+
+- [x] Enforçar capabilities de `.PROC` em toda mutação de estado/dispositivo, com gate explícito de BIOS, autoridade e alvo, e teste de aplicação não autorizada; o caminho de efeitos agora exige `STATE_MUTATE` no processo mediado.
+- [x] Persistir estado da camada de tradução e arquivos abertos no snapshot, restaurando ambos após reload/reboot com testes determinísticos; o runtime normaliza ambos e o envelope ganhou round-trip UTF-8.
