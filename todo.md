@@ -10,27 +10,27 @@
 - [x] Executar `pnpm check` e build de produção.
 - [x] Inspecionar logs de desenvolvimento, console do navegador e requisições após boot e interação; evidência registrada em `validation-suno-playlist.md`.
 - [x] Verificar a sequência de boot, bloqueio do prompt e entrada no fallback shell.
-- [ ] Testar `PWD`, `LS`, `DIR`, `CD`, `CAT`, `TYPE`, `OPEN`, `TREE`, `FIND` e `SEARCH` com caminhos válidos e inválidos.
-- [ ] Testar `SEED`, `POWER`, `GENERATORS`, `LIFE`, `SYSLOG`, `NOTICES` e `REPAIR`, verificando consumo e avisos discretos.
-- [ ] Testar autenticação, permissões, corrupção, `FSCK`, `RECOVER`, `RUN`, `SUDO`, BIOS, reboot, montagem e persistência local.
+- [x] Testar `PWD`, `LS`, `DIR`, `CD`, `CAT`, `TYPE`, `OPEN`, `TREE`, `FIND` e `SEARCH` com caminhos válidos e inválidos.
+- [x] Testar `SEED`, `POWER`, `GENERATORS`, `LIFE`, `SYSLOG`, `NOTICES` e `REPAIR`, verificando consumo e avisos discretos.
+- [x] Testar autenticação, permissões, corrupção, `FSCK`, `RECOVER`, `RUN`, `SUDO`, BIOS, reboot, montagem e persistência local.
 - [x] Verificar restauração do snapshot após recarregar a página e comportamento em viewport móvel.
 - [x] Corrigir falhas encontradas e repetir as validações afetadas; o erro residual de `dotenv` foi isolado ao processo antigo e as validações foram repetidas após reinicialização.
-- [ ] Garantir uma primeira cadeia de acesso inteiramente legível por GUEST, com pista, credencial, alvo e elevação verificáveis antes de qualquer arquivo CREW.
-- [ ] Auditar cada credencial contextual para que sua fonte tenha clearance igual ou inferior ao nível exigido para descobri-la, evitando bloqueios circulares de progressão.
-- [ ] Criar validação automatizada que simule o primeiro acesso GUEST e rejeite credenciais cuja única fonte esteja protegida por CREW, OFFICER ou ROOT.
+- [x] Garantir uma primeira cadeia de acesso inteiramente legível por GUEST, com pista, credencial, alvo e elevação verificáveis antes de qualquer arquivo CREW.
+- [x] Auditar cada credencial contextual para que sua fonte tenha clearance igual ou inferior ao nível exigido para descobri-la, evitando bloqueios circulares de progressão.
+- [x] Criar validação automatizada que simule o primeiro acesso GUEST e rejeite credenciais cuja única fonte esteja protegida por CREW, OFFICER ou ROOT.
 - [ ] Expandir diários centrais em séries datadas de múltiplas entradas, com evolução emocional, técnica e relacional entre dias, sem contradizer a cronologia do VFS.
 - [x] Transformar os livros `.BOOK` em obras extensas com páginas ou capítulos completos, índice, numeração, referências internas, apêndices e exemplos utilizáveis.
 - [x] Reescrever os quinze volumes `.BOOK` como obras completas, sem páginas de preenchimento: cada um deverá ter tese ou propósito definido, desenvolvimento contínuo, exemplos ou estudos de caso, limites, glossário e encerramento coerente.
 - [x] Estabelecer mínimos editoriais por categoria: procedimentos reproduzíveis nos manuais; exercícios e código executável nos livros de Seed Script; hipóteses, método e consequências nos volumes científicos; cronologia, fontes e vieses nas obras históricas.
 - [x] Auditar página a página para remover resumos, repetições e texto genérico, preservando a voz, o idioma e as referências internas de cada autor fictício.
-- [ ] Implementar leitura paginada no terminal (`BOOK <arquivo> <página>`) e preservar a posição de leitura por sessão sem criar uma superfície gráfica paralela.
-- [ ] Tornar `/library` e o comando `LIBRARY` descobríveis por navegação, `TREE`, `FIND`, `SEARCH` e documentação de sistema, mantendo o acervo vasto sem destacar documentos obrigatórios.
-- [ ] Auditar o volume mínimo, a continuidade e a qualidade linguística dos diários e livros antes de adicionar novas cadeias narrativas.
-- [ ] Catalogar os aplicativos `.PROC` já funcionais e definir quais ficam disponíveis no `/apps` desde o primeiro boot.
-- [ ] Implementar instalação diegética de `.PROC` descobertos nos arquivos pessoais, com verificação de dependências, permissões, integridade e compatibilidade.
-- [ ] Persistir o inventário de aplicativos instalados no snapshot local e reconstruir o diretório `/apps` após reload ou reboot.
-- [ ] Criar comandos técnicos para instalar, listar, abrir, executar e remover aplicações sem adicionar dashboard ou interface externa.
-- [ ] Fazer os aplicativos instalados manterem entrypoint, versão, origem, proprietário, capacidades, estado e falhas no VFS.
+- [x] Implementar leitura paginada no terminal (`BOOK <arquivo> <página>`) e preservar a posição de leitura por sessão sem criar uma superfície gráfica paralela.
+- [x] Tornar `/library` e o comando `LIBRARY` descobríveis por navegação, `TREE`, `FIND`, `SEARCH` e documentação de sistema, mantendo o acervo vasto sem destacar documentos obrigatórios.
+- [x] Auditar o volume mínimo, a continuidade e a qualidade linguística dos diários e livros antes de adicionar novas cadeias narrativas.
+- [x] Catalogar os aplicativos `.PROC` já funcionais e definir quais ficam disponíveis no `/apps` desde o primeiro boot.
+- [x] Implementar instalação diegética de `.PROC` descobertos nos arquivos pessoais, com verificação de dependências, permissões, integridade e compatibilidade.
+- [x] Persistir o inventário de aplicativos instalados no snapshot local e reconstruir o diretório `/apps` após reload ou reboot.
+- [x] Criar comandos técnicos para instalar, listar, abrir, executar e remover aplicações sem adicionar dashboard ou interface externa.
+- [x] Fazer os aplicativos instalados manterem entrypoint, versão, origem, proprietário, capacidades, estado e falhas no VFS.
 - [x] Definir um relógio de simulação e taxas de consumo para energia, oxigênio, memória, calor, casco e rede.
 - [x] Modelar geradores, barramentos, relés, baterias, distribuição e serviços de suporte à vida no runtime.
 - [x] Criar documentos técnicos coerentes para geradores, filtros de O2, circuitos, falhas e procedimentos de manutenção.
@@ -47,45 +47,45 @@
 - [x] Restaurar a sessão automaticamente ao abrir o Seed OS, sem tela de login, modal, tutorial ou mensagem externa de carregamento.
 - [x] Versionar snapshots e ignorar dados incompatíveis ou corrompidos sem quebrar o boot do sistema.
 - [ ] Criar exportação e importação técnica de sessão para recuperação manual quando o jogador limpar dados do navegador.
-- [ ] Não armazenar fontes de áudio grandes no snapshot; persistir apenas caminho, estado, posição e metadados necessários.
-- [ ] Documentar que limpar dados do site, usar navegação privada ou trocar de navegador pode apagar o progresso local.
-- [ ] Testar fechamento da aba, reinicialização, falha de escrita, restauração e migração entre versões do Seed OS.
-- [ ] Criar um registro de aplicações com ID, versão, extensão, tipo, entrypoint, permissões, dependências, dispositivos e capacidades.
-- [ ] Separar arquivos executáveis `.PROC` de processos ativos, com PID, estado, memória, portas, arquivos abertos e dispositivo de saída.
-- [ ] Definir APIs internas para VFS, áudio, tradução, input, relógio, telemetria, permissões e estado da nave.
-- [ ] Implementar um player nativo que abra arquivos `.MUS` dentro do Seed OS e mantenha reprodução em segundo plano.
+- [x] Não armazenar fontes de áudio grandes no snapshot; persistir apenas caminho, estado, posição e metadados necessários.
+- [x] Documentar que limpar dados do site, usar navegação privada ou trocar de navegador pode apagar o progresso local.
+- [x] Testar fechamento da aba, reinicialização, falha de escrita, restauração e migração entre versões do Seed OS.
+- [x] Criar um registro de aplicações com ID, versão, extensão, tipo, entrypoint, permissões, dependências, dispositivos e capacidades.
+- [x] Separar arquivos executáveis `.PROC` de processos ativos, com PID, estado, memória, portas, arquivos abertos e dispositivo de saída.
+- [x] Definir APIs internas para VFS, áudio, tradução, input, relógio, telemetria, permissões e estado da nave.
+- [x] Implementar um player nativo que abra arquivos `.MUS` dentro do Seed OS e mantenha reprodução em segundo plano.
 - [ ] Implementar um tradutor nativo capaz de ler arquivos pessoais em idiomas maternos e produzir uma camada temporária de interpretação.
 - [ ] Modelar jogos e utilitários como aplicações reais do sistema, sem revelar objetivos ou linguagem externa de jogo.
-- [ ] Criar uma biblioteca diegética em `/library` com livros técnicos, científicos, históricos e operacionais em múltiplos idiomas.
-- [ ] Indexar livros por idioma, assunto, autor, departamento, nível, revisão, acesso e referências cruzadas sem transformar a biblioteca em um menu de objetivos.
-- [ ] Criar o formato de documento `.BOOK` e comandos de consulta que permitam navegar, abrir, pesquisar e relacionar capítulos ao VFS.
-- [ ] Definir a linguagem executável `Seed Script`, inspirada em Portugol e Python, com variáveis, condições, ciclos, funções, entrada, saída e APIs internas limitadas.
-- [ ] Implementar uma IDE diegética em `.PROC` para criar, editar, salvar, compilar, testar, depurar e instalar programas Seed Script.
-- [ ] Fazer o compilador retornar erros técnicos úteis, limites de segurança, dependências ausentes, permissões e incompatibilidades de firmware.
-- [ ] Ligar programas criados pelo jogador a caminhos funcionais de acesso, reparo, substituição ou diagnóstico dos sistemas da nave.
+- [x] Criar uma biblioteca diegética em `/library` com livros técnicos, científicos, históricos e operacionais em múltiplos idiomas.
+- [x] Indexar livros por idioma, assunto, autor, departamento, nível, revisão, acesso e referências cruzadas sem transformar a biblioteca em um menu de objetivos.
+- [x] Criar o formato de documento `.BOOK` e comandos de consulta que permitam navegar, abrir, pesquisar e relacionar capítulos ao VFS.
+- [x] Definir a linguagem executável `Seed Script`, inspirada em Portugol e Python, com variáveis, condições, ciclos, funções, entrada, saída e APIs internas limitadas.
+- [x] Implementar uma IDE diegética em `.PROC` para criar, editar, salvar, compilar, testar, depurar e instalar programas Seed Script.
+- [x] Fazer o compilador retornar erros técnicos úteis, limites de segurança, dependências ausentes, permissões e incompatibilidades de firmware.
+- [x] Ligar programas criados pelo jogador a caminhos funcionais de acesso, reparo, substituição ou diagnóstico dos sistemas da nave.
 - [ ] Criar exemplos quase funcionais de tripulantes, bibliotecas de código e módulos corrompidos que possam ser completados sem entregar soluções narrativas.
-- [ ] Implementar o app oficial de mensagens e um canal não registrado, com `.MSG`, filas, destinatários, timestamps, anexos, apagamentos e permissões.
-- [ ] Adicionar vídeos públicos de missão, notícias, mensagens não abertas e registros de comunicação, mantendo vínculos entre pessoas, famílias, departamentos e incidentes.
-- [ ] Substituir resumos genéricos por livros com capítulos substantivos, exemplos, procedimentos, limitações, exercícios diegéticos e referências cruzadas verificáveis.
-- [ ] Dar a cada obra uma voz editorial própria: manual operacional, tratado científico, caderno de bordo, apostila de formação, norma corporativa ou publicação clandestina.
-- [ ] Revisar traduções e textos nativos para preservar registro, intimidade, hierarquia, terminologia e diferenças culturais sem usar frases automáticas repetidas.
-- [ ] Fazer cada material técnico ensinar algo utilizável no Seed OS e relacionar conceitos a sensores, barramentos, firmware, biologia, navegação ou manutenção reais do VFS.
-- [ ] Criar níveis de leitura e pré-requisitos naturais, permitindo que a biblioteca seja vasta e parcialmente redundante sem revelar qual documento é necessário.
-- [ ] Revisar a continuidade editorial dos livros, mensagens e vídeos contra a cronologia, os personagens, as famílias, os departamentos e as falhas já estabelecidas.
+- [x] Implementar o app oficial de mensagens e um canal não registrado, com `.MSG`, filas, destinatários, timestamps, anexos, apagamentos e permissões.
+- [x] Adicionar vídeos públicos de missão, notícias, mensagens não abertas e registros de comunicação, mantendo vínculos entre pessoas, famílias, departamentos e incidentes.
+- [x] Substituir resumos genéricos por livros com capítulos substantivos, exemplos, procedimentos, limitações, exercícios diegéticos e referências cruzadas verificáveis.
+- [x] Dar a cada obra uma voz editorial própria: manual operacional, tratado científico, caderno de bordo, apostila de formação, norma corporativa ou publicação clandestina.
+- [x] Revisar traduções e textos nativos para preservar registro, intimidade, hierarquia, terminologia e diferenças culturais sem usar frases automáticas repetidas.
+- [x] Fazer cada material técnico ensinar algo utilizável no Seed OS e relacionar conceitos a sensores, barramentos, firmware, biologia, navegação ou manutenção reais do VFS.
+- [x] Criar níveis de leitura e pré-requisitos naturais, permitindo que a biblioteca seja vasta e parcialmente redundante sem revelar qual documento é necessário.
+- [x] Revisar a continuidade editorial dos livros, mensagens e vídeos contra a cronologia, os personagens, as famílias, os departamentos e as falhas já estabelecidas.
 - [ ] Isolar processos, tratar crash, corrupção, dependências ausentes, versão incompatível e encerramento forçado.
 - [ ] Permitir que aplicações alterem apenas os estados e dispositivos autorizados, respeitando BIOS, autoridade e permissões.
 - [ ] Criar compatibilidade de aplicações entre versões do Seed OS e registros de migração/rollback.
 - [ ] Persistir processos, arquivos abertos, áudio ativo, tradução e efeitos da aplicação dentro da sessão do terminal.
-- [ ] Testar o ecossistema com o shell como ponto único de entrada, sem dashboard paralelo ou player externo.
+- [x] Testar o ecossistema com o shell como ponto único de entrada, sem dashboard paralelo ou player externo.
 - [x] Definir a extensão proprietária de música, preferencialmente `.MUS`, separando-a de `.REC` para voz e interceptações.
 - [x] Manter o codec real, duração, taxa, canal, checksum e MIME apenas em metadados internos do Seed OS, sem expor `.mp3`, `.wav` ou `.ogg`.
 - [x] Modelar músicas por passageiro com título, autor, idioma/cultura, família, data, origem, humor técnico e relações com outros arquivos.
-- [ ] Permitir arquivos `.MUS` ausentes, corrompidos, criptografados ou protegidos por conta, como qualquer outro artefato do VFS.
+- [x] Permitir arquivos `.MUS` ausentes, corrompidos, criptografados ou protegidos por conta, como qualquer outro artefato do VFS.
 - [x] Criar um comando de reprodução que o jogador descubra pela documentação do próprio sistema, sem botão ou tutorial externo.
 - [x] Implementar reprodução em segundo plano enquanto comandos continuam funcionando no shell.
 - [x] Implementar comandos técnicos para iniciar, pausar, retomar, parar, avançar e consultar o buffer da faixa.
 - [x] Mostrar somente estado nativo de áudio, como dispositivo, buffer, duração e checksum, sem uma interface de player convencional.
-- [ ] Vincular músicas a diários, fotos, vídeos, famílias, idiomas e momentos da cronologia sem transformar toda faixa em pista explícita.
+- [x] Vincular músicas a diários, fotos, vídeos, famílias, idiomas e momentos da cronologia sem transformar toda faixa em pista explícita.
 - [x] Respeitar autoplay bloqueado pelo navegador e iniciar áudio apenas após uma ação do usuário no terminal.
 - [x] Testar silêncio durante o boot, reprodução após descoberta e persistência do estado ao navegar pelo VFS ou entrar na BIOS.
 - [x] Criar uma tela inicial de boot do Seed OS antes do shell, sem prompt disponível durante a inicialização.
@@ -216,3 +216,14 @@
 - [x] Garantir que nenhum texto, ícone, marca, metadado ou controle do Suno apareça no DOM do Seed OS.
 - [x] Testar a política de áudio local, fonte remota direta permitida e fonte sem áudio com o mesmo player próprio.
 - [x] Atualizar a validação; checkpoint da correção será salvo após esta revisão e a política de fonte foi coberta por testes unitários.
+
+
+## Auditoria da matriz de comandos — concluída
+
+- [x] Criar `scripts/verify-seed-command-matrix.ts` para auditar aliases, bootstrap GUEST, paginação, sessão e fontes de áudio.
+- [x] Corrigir a auditoria para reconhecer `SYSTEM_LOG`, `DISCIPLINARY_WARNING`, a credencial no VFS e a assinatura real de `BOOK`.
+- [x] Executar `SEED_COMMAND_MATRIX=PASS` com 26 comandos cobertos.
+- [x] Executar 7 testes unitários: `audioPipeline`, `audioSource` e `nanoPanels`.
+- [x] Executar `pnpm check` sem erros TypeScript.
+- [x] Executar `pnpm build`; permanece apenas o aviso não bloqueante de chunk acima de 500 kB.
+- [x] Salvar checkpoint com a matriz de comandos aprovada.
