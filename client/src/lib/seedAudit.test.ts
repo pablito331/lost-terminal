@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSeedIndex } from "./seedData";
-import { continuityIssues, credentialContextIssues, culturalCoverage, documentSchemaIssues, isLegacyHelp, personalInventory, searchFieldCoverage, searchSeedFiles, sensitiveRecordIssues } from "./seedAudit";
+import { continuityIssues, credentialContextIssues, culturalCoverage, documentSchemaIssues, isLegacyHelp, personalInventory, searchFieldCoverage, searchSeedFiles, sensitiveRecordIssues, terminalCoherenceIssues, terminalIdentityLine } from "./seedAudit";
 
 describe("Seed OS audit helpers", () => {
   const index = createSeedIndex();
@@ -64,6 +64,39 @@ describe("Seed OS audit helpers", () => {
     expect(coverage.languageCount).toBe(8);
     expect(coverage.familyCount).toBe(150);
     expect(coverage.personalNativeFiles).toBeGreaterThan(600);
+  });
+
+  it("emits explicit nationality and family indicators only when file context exists", () => {
+    const personal = index.files.find((file) => file.ownerId === "passenger-014");
+    const system = index.files.find((file) => file.layer === "SYSTEM");
+    expect(personal).toBeDefined();
+    expect(terminalIdentityLine(personal!, index)).toMatch(/IDENTITY :: NATIONALITY [A-Z]{2}    FAMILY family-\d+/);
+    expect(terminalIdentityLine(system!, index)).toBeNull();
+  });
+
+  it("rejects runtime references and firmware combinations that cannot exist in the VFS", () => {
+    const issues = terminalCoherenceIssues(index, {
+      openFiles: ["/missing.SCR"],
+      recoveredPaths: ["/missing.HLT"],
+      authenticatedUsers: ["UNKNOWN"],
+      installedApps: [{ sourcePath: "/missing.PROC", installedPath: "/tmp/app.PROC" }],
+      processes: [{ path: "/missing.PROC", state: "RUNNING" }],
+      audio: { path: "/missing.MUS", status: "PLAYING" },
+      boot: "BIOS",
+      firmware: { maintenancePort: true, ghostBus: true, cryo601: true, rootWrite: true, hiddenVolume: false, debugConsole: false },
+      mountedVolumes: [],
+    });
+    expect(issues).toEqual(expect.arrayContaining([
+      "openFiles:missing-path:/missing.SCR",
+      "recoveredPaths:missing-path:/missing.HLT",
+      "authenticatedUsers:unknown-account:UNKNOWN",
+      "installedApps:invalid-target:/tmp/app.PROC",
+      "audio:missing-path:/missing.MUS",
+      "boot:BIOS-without-ship-volume",
+      "firmware:ghost-bus-without-debug-console",
+      "firmware:cryo601-without-hidden-volume",
+      "firmware:maintenance-port-without-volume",
+    ]));
   });
 
   it("recognizes only a short incomplete legacy reference as HELP", () => {

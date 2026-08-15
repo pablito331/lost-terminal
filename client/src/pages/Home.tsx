@@ -11,7 +11,7 @@ import { createInitialShipSystems, repairGenerator, repairLifeSupport, ShipSyste
 import { compileSeedScript, runSeedScript, SeedScriptEffects } from "@/lib/seedScript";
 import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleNanoPanel, visibleNanoPanels, NanoPanel } from "@/lib/nanoPanels";
 import { configureLofiGraph } from "@/lib/audioPipeline";
-import { searchSeedFiles } from "@/lib/seedAudit";
+import { searchSeedFiles, terminalIdentityLine } from "@/lib/seedAudit";
 import { translateSeedFile } from "@/lib/seedTranslator";
 import { crashSeedProcess, processCanUse, SeedProcess, spawnSeedProcess, stopSeedProcess, validateProcessSpec } from "@/lib/seedProcess";
 import { attemptSeedExploit, ExploitMode } from "@/lib/seedExploit";
@@ -135,6 +135,7 @@ function openLines(file: SeedFile, index: SeedIndex, runtime: RuntimeState): Ter
     ...(file.department || file.accessTerminal ? [{ text: `SOURCE   :: ${file.department ?? "-"} / ${file.accessTerminal ?? "-"}`, tone: "dim" as Tone }] : []),
     ...(file.authorId || file.recipientIds?.length ? [{ text: `ROUTE    :: ${file.authorId ?? "SYSTEM"} -> ${(file.recipientIds ?? []).join(", ") || "LOCAL"}`, tone: "dim" as Tone }] : []),
     ...(file.supersedes ? [{ text: `REV      :: supersedes ${file.supersedes}`, tone: "amber" as Tone }] : []),
+    ...(terminalIdentityLine(file, index) ? [{ text: terminalIdentityLine(file, index)!, tone: owner ? "dim" as Tone : "amber" as Tone }] : []),
     ...(owner ? [{ text: `OWNER    :: ${owner.name} / ${owner.nationality} / ${owner.familyId}`, tone: "dim" as Tone }] : []),
     { text: "────────────────────────────────────────────────────────", tone: "dim" },
   ];
@@ -849,6 +850,7 @@ export default function Home() {
   const appFiles = useMemo(() => runtimeIndex.files.filter((file) => file.directory === "/apps" && file.extension === ".PROC").slice(0, 5), [runtimeIndex]);
   const visibleLinks = activeFile?.links.slice(0, 6) ?? [];
   const selectedReadable = activeFile ? clearanceRank[runtime.authority] >= clearanceRank[activeFile.clearance] || Boolean(activeFile.access && runtime.authenticatedUsers.includes(activeFile.access.username)) : false;
+  const activeCrew = useMemo(() => activeFile?.ownerId ? runtimeIndex.crew.find((member) => member.id === activeFile.ownerId) : undefined, [activeFile, runtimeIndex]);
   const inspectEntry = (entry: ReturnType<typeof listDirectory>[number]) => {
     if (entry.type === "dir") { executeCommand(`CD ${normalizePath(entry.name, cwd)}`); return; }
     if (!entry.file) return;
@@ -903,7 +905,7 @@ export default function Home() {
         {activeFile ? <>
           <div className="lens-identity"><span className="lens-extension">{activeFile.extension}</span><div><strong>{activeFile.name}</strong><span>{activeFile.layer} // {activeFile.language}</span></div></div>
           <div className="lens-summary">{activeFile.summary}</div>
-          <dl className="lens-metadata"><div><dt>PATH</dt><dd>{activeFile.path}</dd></div><div><dt>ACCESS</dt><dd className={selectedReadable ? "signal-good" : "signal-amber"}>{selectedReadable ? "MOUNTED" : `REQUIRES ${activeFile.clearance}`}</dd></div><div><dt>INTEGRITY</dt><dd className={activeFile.integrity === "CLEAN" || !activeFile.integrity ? "signal-good" : activeFile.integrity === "ENCRYPTED" ? "signal-amber" : "signal-red"}>{activeFile.integrity ?? "CLEAN"}</dd></div><div><dt>REVISION</dt><dd>{activeFile.updated}</dd></div></dl>
+          <dl className="lens-metadata"><div><dt>PATH</dt><dd>{activeFile.path}</dd></div><div><dt>ACCESS</dt><dd className={selectedReadable ? "signal-good" : "signal-amber"}>{selectedReadable ? "MOUNTED" : `REQUIRES ${activeFile.clearance}`}</dd></div><div><dt>INTEGRITY</dt><dd className={activeFile.integrity === "CLEAN" || !activeFile.integrity ? "signal-good" : activeFile.integrity === "ENCRYPTED" ? "signal-amber" : "signal-red"}>{activeFile.integrity ?? "CLEAN"}</dd></div><div><dt>REVISION</dt><dd>{activeFile.updated}</dd></div><div><dt>CONTEXT</dt><dd>{activeFile.layer} / {activeFile.language}</dd></div><div><dt>ORIGIN</dt><dd>{activeCrew ? `${activeCrew.nationality} / ${activeCrew.familyName}` : activeFile.familyId ?? "SYSTEM"}</dd></div></dl>
            {activeFile.payload.kind === "visual" && <div className="payload-lens payload-lens-visual"><div className="lens-links-title">VISUAL PAYLOAD // FRAME TRACE</div><strong>{activeFile.payload.caption}</strong><span>{activeFile.payload.alt}</span><div className="payload-telemetry">{activeFile.payload.telemetry.map((entry) => <code key={entry}>{entry}</code>)}</div></div>}
            {activeFile.payload.kind === "audio" && activeFile.extension === ".REC" && <div className="payload-lens payload-lens-voice"><div className="lens-links-title">VOICE PAYLOAD // TRANSCRIPT BUFFER</div><span>CODEC :: {activeFile.payload.codec ?? "SEED-VOICE"}</span><strong>{activeFile.payload.duration} // {activeFile.payload.audioType ?? "VOICE"}</strong><p>{activeFile.payload.transcript}</p></div>}
            <button type="button" className="lens-action" onClick={() => executeCommand(`OPEN ${activeFile.path}`)}><span>↳</span> PROJECT TO CHANNEL</button>

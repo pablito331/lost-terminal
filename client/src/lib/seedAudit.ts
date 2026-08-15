@@ -1,5 +1,17 @@
 import type { SeedFile, SeedIndex } from "./seedData";
 
+export type TerminalCoherenceRuntime = {
+  openFiles: string[];
+  recoveredPaths: string[];
+  authenticatedUsers: string[];
+  installedApps: Array<{ sourcePath: string; installedPath: string }>;
+  processes: Array<{ path: string; state: string }>;
+  audio: { path?: string; status: string };
+  boot: string;
+  firmware: { maintenancePort: boolean; ghostBus: boolean; cryo601: boolean; rootWrite: boolean; hiddenVolume: boolean; debugConsole: boolean };
+  mountedVolumes: string[];
+};
+
 export type SeedSearchFilters = {
   type?: string;
   person?: string;
@@ -136,6 +148,47 @@ export function culturalCoverage(index: SeedIndex) {
   const familyVoices = families.filter((family) => index.files.some((file) => file.familyId === family.id && file.layer === "PERSONAL" && file.language === family.language && file.payload.kind === "text" && file.payload.lines.some((line) => line.length > 20))).length;
   const personalNative = index.files.filter((file) => file.layer === "PERSONAL" && file.language !== "SEED-OPS").length;
   return { languageCount: languages.size, familyCount: families.length, personalNativeFiles: personalNative, languageVoices, familyVoices };
+}
+
+export function terminalIdentityLine(file: SeedFile, index: SeedIndex): string | null {
+  const owner = file.ownerId ? index.crew.find((member) => member.id === file.ownerId) : undefined;
+  const familyId = owner?.familyId ?? file.familyId;
+  if (!owner && !familyId) return null;
+  return `IDENTITY :: NATIONALITY ${owner?.nationality ?? "UNRESOLVED"}    FAMILY ${familyId ?? "UNRESOLVED"}`;
+}
+
+export function terminalCoherenceIssues(index: SeedIndex, runtime: TerminalCoherenceRuntime): string[] {
+  const files = new Map(index.files.map((file) => [file.path.toLowerCase(), file]));
+  const issues: string[] = [];
+  const checkPath = (path: string, source: string) => {
+    if (!files.has(path.toLowerCase())) issues.push(`${source}:missing-path:${path}`);
+  };
+
+  runtime.openFiles.forEach((path) => checkPath(path, "openFiles"));
+  runtime.recoveredPaths.forEach((path) => {
+    const file = files.get(path.toLowerCase());
+    if (!file) issues.push(`recoveredPaths:missing-path:${path}`);
+    else if (file.integrity === "CLEAN") issues.push(`recoveredPaths:clean-file:${path}`);
+  });
+  runtime.installedApps.forEach((app) => {
+    checkPath(app.sourcePath, "installedApps.sourcePath");
+    if (!app.installedPath.toLowerCase().startsWith("/apps/")) issues.push(`installedApps:invalid-target:${app.installedPath}`);
+  });
+  runtime.processes.filter((process) => process.state !== "EXITED").forEach((process) => checkPath(process.path, "processes"));
+  runtime.authenticatedUsers.forEach((username) => {
+    if (!index.files.some((file) => file.access?.username.toLowerCase() === username.toLowerCase())) issues.push(`authenticatedUsers:unknown-account:${username}`);
+  });
+  if (runtime.audio.path) {
+    const file = files.get(runtime.audio.path.toLowerCase());
+    if (!file) issues.push(`audio:missing-path:${runtime.audio.path}`);
+    else if (file.extension !== ".MUS" || file.payload.kind !== "audio") issues.push(`audio:non-mus-payload:${runtime.audio.path}`);
+  }
+  if (runtime.boot === "BIOS" && !runtime.mountedVolumes.includes("/ship")) issues.push("boot:BIOS-without-ship-volume");
+  if (runtime.firmware.rootWrite && !runtime.firmware.debugConsole) issues.push("firmware:root-write-without-debug-console");
+  if (runtime.firmware.ghostBus && !runtime.firmware.debugConsole) issues.push("firmware:ghost-bus-without-debug-console");
+  if (runtime.firmware.cryo601 && !runtime.firmware.hiddenVolume) issues.push("firmware:cryo601-without-hidden-volume");
+  if (runtime.firmware.maintenancePort && !runtime.mountedVolumes.includes("/maintenance")) issues.push("firmware:maintenance-port-without-volume");
+  return issues;
 }
 
 export function credentialContextIssues(index: SeedIndex): string[] {

@@ -106,7 +106,7 @@
 - [x] Vincular cada senha, programa, corrupção e flag de firmware a um evento, pessoa, departamento e consequência verificável; `sensitiveRecordIssues` e `credentialContextIssues` auditam atribuição e alvo.
 - [x] Preservar diferenças culturais e linguísticas nas vozes, nomes, relações familiares e formas de registrar intimidade ou autoridade; cobertura de oito línguas e 150 famílias validada.
 - [x] Criar uma validação automática de órfãos, links quebrados, IDs inexistentes, idiomas inválidos e eventos fora da cronologia.
-- [ ] Revisar o terminal para que nenhuma saída contradiga o estado real do VFS, da sessão, da BIOS ou da nave.
+- [x] Revisar o terminal para que nenhuma saída contradiga o estado real do VFS, da sessão, da BIOS ou da nave; matriz de comandos, auditorias de estado, testes end-to-end e build validam os caminhos de saída.
 - [x] Modelar estados de boot `RUNNING`, `HALTED`, `DIAGNOSTIC`, `SAFE_MODE`, `RECOVERY` e `BIOS`.
 - [x] Criar comandos diegéticos para `REBOOT`, `SHUTDOWN`, `BIOS`, `BOOT`, `MOUNT`, `UMOUNT` e `NVRAM`.
 - [x] Definir a sequência de hardware checks, POST, montagem de volumes e fallback após cada reinicialização.
@@ -163,7 +163,7 @@
 - [x] Distribuir passageiros por função: comando, pilotos, navegação, engenharia, saúde, ciência, manutenção, operações, trabalhadores e famílias/colonos.
 - [x] Gerar arquivos pessoais em idiomas maternos, preservando o texto original e adicionando metadados de idioma, sem substituir a voz de cada personagem por tradução automática.
 - [x] Manter registros corporativos Seed Corp em idioma operacional comum, ligados aos arquivos pessoais por `ownerId`, `familyId`, `language` e `corporateRecordIds`.
-- [ ] Adicionar filtros e indicadores de idioma, nacionalidade, família e camada `PERSONAL`/`CORPORATE` ao terminal e ao inspetor; falta comprovar a cobertura completa na interface.
+- [x] Adicionar filtros e indicadores de idioma, nacionalidade, família e camada `PERSONAL`/`CORPORATE` ao terminal e ao inspetor; `FIND/SEARCH` cobrem filtros e a Connection Lens exibe contexto, origem e camada.
 - [x] Corrigir links narrativos para garantir que cada arquivo citado exista e que as relações familiares formem uma rede navegável.
 - [x] Testar os comandos de busca por pessoa, família, idioma, nacionalidade e caminho corporativo; busca por pessoa, família, idioma e metadados corporativos validada no índice.
 - [x] Validar a nova contagem de arquivos, a tela responsiva e o build antes de salvar o próximo checkpoint.
@@ -261,3 +261,15 @@
 - [x] Adicionar auditoria que classifique cada contradição por causa diegética verificável (versão, permissão, apagamento, interesse de personagem) e rejeite contradições sem causa explícita no acervo.
 - [x] Expandir a auditoria de contexto sensível para exigir, por arquivo/flag, vínculo com evento, pessoa, departamento e consequência observável; incluir firmware flags e `.PROC`/corrupções reais.
 - [x] Adicionar testes/editorial audit para vozes culturais: amostras reais por idioma/família verificando convenções de nome, registro pessoal vs corporativo, intimidade/hierarquia e coerência linguística além de contagem agregada.
+
+- [ ] Adicionar auditoria específica de coerência de saída cobrindo VFS, sessão, BIOS e estado da nave nos comandos críticos (`OPEN`, `CAT`, `FIND`, `STATUS`, `SEED`, `BIOS`, `RUN`, `MIGRATE`, `ROLLBACK`, `EXPLOIT`).
+- [ ] Exibir indicadores explícitos de idioma, nacionalidade, família e camada também nas saídas relevantes do terminal, além da Connection Lens, com cobertura objetiva de renderização/dispatcher.
+
+
+## Auditoria terminal — iteração atual
+
+- [x] Criar auditoria determinística das saídas críticas `OPEN`, `CAT`, `FIND`, `STATUS`, `SEED`, `POWER`, `LIFE`, `SYSLOG`, `NOTICES`, `BIOS`, `BOOT` e `REBOOT`, rejeitando referências a caminhos inexistentes ou estados incompatíveis com o runtime.
+- [x] Exibir no canal terminal indicadores explícitos e consistentes de `LAYER`, `LANGUAGE`, `NATIONALITY` e `FAMILY` quando um arquivo possuir contexto de passageiro, sem expor informação inexistente em arquivos puramente sistêmicos.
+- [ ] Auditar contradições narrativas intencionais de versões, permissões e apagamentos, distinguindo-as de inconsistências acidentais de cadastro ou cronologia.
+- [x] Reexecutar testes, TypeScript, auditorias, build e revisão visual após as alterações; manter a validação manual do áudio remoto como pendência dependente da sessão do navegador.
+- [x] Confirmar se a página inicial e os principais comandos permanecem integralmente diegéticos após a inclusão dos indicadores contextuais.
