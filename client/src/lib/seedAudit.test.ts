@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSeedIndex } from "./seedData";
-import { continuityIssues, credentialContextIssues, culturalCoverage, documentSchemaIssues, isLegacyHelp, personalInventory, searchFieldCoverage, searchSeedFiles, sensitiveRecordIssues, terminalCoherenceIssues, terminalIdentityLine } from "./seedAudit";
+import { continuityIssues, credentialContextIssues, culturalCoverage, documentSchemaIssues, intentionalContradictionIssues, isLegacyHelp, personalInventory, searchFieldCoverage, searchSeedFiles, sensitiveRecordIssues, terminalCoherenceIssues, terminalIdentityLine } from "./seedAudit";
 
 describe("Seed OS audit helpers", () => {
   const index = createSeedIndex();
@@ -55,6 +55,7 @@ describe("Seed OS audit helpers", () => {
 
   it("keeps narrative links, sensitive records and credential context attributable", () => {
     expect(continuityIssues(index)).toEqual([]);
+    expect(intentionalContradictionIssues(index)).toEqual([]);
     expect(sensitiveRecordIssues(index)).toEqual([]);
     expect(credentialContextIssues(index)).toEqual([]);
   });

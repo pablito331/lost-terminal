@@ -111,6 +111,19 @@ export function isLegacyHelp(lines: Array<{ text: string }>): boolean {
 
 const contradictionCauses = /(version|vers[aã]o|permission|permiss[aã]o|access|acesso|delet|apag|interest|interesse|override|exception|exce[cç][aã]o|refused|recus|warning|advert)/i;
 const consequenceSignals = /(event|evento|access|acesso|repair|repar|recover|recuper|corrupt|corrup|firmware|service|servi[cç]o|override|autoriza|blocked|bloque)/i;
+const intentionalContradictionSignals = /(version|vers[aã]o|permission|permiss[aã]o|access|acesso|delet|apag|supersed|sobres|override|exception|exce[cç][aã]o|refused|recus|warning|advert)/i;
+
+export function intentionalContradictionIssues(index: SeedIndex): string[] {
+  const paths = new Set(index.files.map((file) => file.path.toLowerCase()));
+  return index.files.flatMap((file) => {
+    if (!file.contradiction) return [];
+    const context = [file.contradiction, file.summary, file.supersedes ?? "", ...file.keywords, ...(file.payload.kind === "text" ? file.payload.lines : [])].join(" ");
+    const hasCause = intentionalContradictionSignals.test(context);
+    const hasReference = file.links.some((link) => paths.has(link.target.toLowerCase())) || Boolean(file.supersedes);
+    const hasStateMechanism = Boolean(file.access || file.supersedes || file.integrity === "CORRUPTED" || file.documentType === "ACCESS_LOG" || file.documentType === "DISCIPLINARY_WARNING" || file.documentType === "MEETING_MINUTES" || file.documentType === "MEMO");
+    return hasCause && hasReference && hasStateMechanism ? [] : [`${file.path}:contradiction-not-grounded-in-state`];
+  });
+}
 
 export function continuityIssues(index: SeedIndex): string[] {
   const paths = new Set(index.files.map((file) => file.path.toLowerCase()));

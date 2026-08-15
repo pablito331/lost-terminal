@@ -234,7 +234,7 @@
 - [x] Implementar bloqueio temporário de contas por ciclos do Seed OS, expiração persistente em snapshots e aviso técnico no buffer SYSLOG.
 - [x] Validar TypeScript, suíte Vitest, auditorias Seed OS, matriz de comandos e build de produção após reinicialização do servidor; suíte atualizada para 30 testes.
 
-- [ ] Validar manualmente no navegador o fluxo de reprodução de playlist.MUS após AUTH I.CHEN e PLAY playlist.MUS; autoplay e disponibilidade do canal direto dependem da sessão do navegador.
+- [ ] Validar manualmente no navegador a emissão audível e o modo LO-FI de `playlist.MUS` após `AUTH I.CHEN` e `PLAY playlist.MUS`; a sessão confirmou credencial, carregamento nativo (`readyState: 4`, duração 282.04 s), canal direto mascarado e player próprio, mas o elemento permaneceu pausado por exigir gesto nativo não exposto no preview. Evidência: `validation-audio-2026-08-15.md`.
 - [x] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade; `TRANSLATE` preserva o payload e herda clearance, conta e integridade.
 - [x] Formalizar isolamento completo de processos `.PROC` com PID, memória, portas e encerramento seguro; núcleo puro, integração no `RUN` e comandos `PS/KILL` validados.
 - [x] Adicionar lentes visuais dedicadas para payloads .VIS e .REC no Connection Lens, com frame trace, telemetria, buffer de transcrição e codec diegético.
@@ -270,6 +270,6 @@
 
 - [x] Criar auditoria determinística das saídas críticas `OPEN`, `CAT`, `FIND`, `STATUS`, `SEED`, `POWER`, `LIFE`, `SYSLOG`, `NOTICES`, `BIOS`, `BOOT` e `REBOOT`, rejeitando referências a caminhos inexistentes ou estados incompatíveis com o runtime.
 - [x] Exibir no canal terminal indicadores explícitos e consistentes de `LAYER`, `LANGUAGE`, `NATIONALITY` e `FAMILY` quando um arquivo possuir contexto de passageiro, sem expor informação inexistente em arquivos puramente sistêmicos.
-- [ ] Auditar contradições narrativas intencionais de versões, permissões e apagamentos, distinguindo-as de inconsistências acidentais de cadastro ou cronologia.
+- [x] Auditar contradições narrativas intencionais de versões, permissões e apagamentos, distinguindo-as de inconsistências acidentais de cadastro ou cronologia.
 - [x] Reexecutar testes, TypeScript, auditorias, build e revisão visual após as alterações; manter a validação manual do áudio remoto como pendência dependente da sessão do navegador.
 - [x] Confirmar se a página inicial e os principais comandos permanecem integralmente diegéticos após a inclusão dos indicadores contextuais.
