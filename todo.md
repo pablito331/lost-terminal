@@ -193,7 +193,7 @@
 
 - [x] Integrar o manifesto de playlist em `passenger-014`.
 - [x] Implementar o nano painel do player.
-- [ ] Validar manualmente a reprodução e o modo LO-FI após `AUTH I.CHEN` e `PLAY playlist.MUS`.
+- [x] Validar manualmente a reprodução e o modo LO-FI após `AUTH I.CHEN` e `PLAY playlist.MUS`; confirmado pelo gesto diegético `FLOW`, com elemento nativo em `PLAYING`, `paused: false`, duração 282.04 s e `controls: false`.
 - [x] Criar checkpoint final.
 
 
@@ -234,7 +234,7 @@
 - [x] Implementar bloqueio temporário de contas por ciclos do Seed OS, expiração persistente em snapshots e aviso técnico no buffer SYSLOG.
 - [x] Validar TypeScript, suíte Vitest, auditorias Seed OS, matriz de comandos e build de produção após reinicialização do servidor; suíte atualizada para 30 testes.
 
-- [ ] Validar manualmente no navegador a emissão audível e o modo LO-FI de `playlist.MUS` após `AUTH I.CHEN` e `PLAY playlist.MUS`; a sessão confirmou credencial, carregamento nativo (`readyState: 4`, duração 282.04 s), canal direto mascarado e player próprio, mas o elemento permaneceu pausado por exigir gesto nativo não exposto no preview. Evidência: `validation-audio-2026-08-15.md`.
+- [x] Validar manualmente no navegador a emissão audível e o modo LO-FI de `playlist.MUS` após `AUTH I.CHEN` e `PLAY playlist.MUS`; confirmado com o gesto diegético `FLOW`: `readyState: 4`, `duration: 282.039979`, `paused: false`, `currentTime: 7.210667`, `controls: false`, status `PLAYING`. Evidência: `validation-audio-2026-08-15.md`.
 - [x] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade; `TRANSLATE` preserva o payload e herda clearance, conta e integridade.
 - [x] Formalizar isolamento completo de processos `.PROC` com PID, memória, portas e encerramento seguro; núcleo puro, integração no `RUN` e comandos `PS/KILL` validados.
 - [x] Adicionar lentes visuais dedicadas para payloads .VIS e .REC no Connection Lens, com frame trace, telemetria, buffer de transcrição e codec diegético.
@@ -262,8 +262,8 @@
 - [x] Expandir a auditoria de contexto sensível para exigir, por arquivo/flag, vínculo com evento, pessoa, departamento e consequência observável; incluir firmware flags e `.PROC`/corrupções reais.
 - [x] Adicionar testes/editorial audit para vozes culturais: amostras reais por idioma/família verificando convenções de nome, registro pessoal vs corporativo, intimidade/hierarquia e coerência linguística além de contagem agregada.
 
-- [ ] Adicionar auditoria específica de coerência de saída cobrindo VFS, sessão, BIOS e estado da nave nos comandos críticos (`OPEN`, `CAT`, `FIND`, `STATUS`, `SEED`, `BIOS`, `RUN`, `MIGRATE`, `ROLLBACK`, `EXPLOIT`).
-- [ ] Exibir indicadores explícitos de idioma, nacionalidade, família e camada também nas saídas relevantes do terminal, além da Connection Lens, com cobertura objetiva de renderização/dispatcher.
+- [x] Adicionar auditoria específica de coerência de saída cobrindo VFS, sessão, BIOS e estado da nave nos comandos críticos (`OPEN`, `CAT`, `FIND`, `STATUS`, `SEED`, `BIOS`, `RUN`, `MIGRATE`, `ROLLBACK`, `EXPLOIT`); matriz ampliada para 18 comandos e gates esperados.
+- [x] Exibir indicadores explícitos de idioma, nacionalidade, família e camada também nas saídas relevantes do terminal, além da Connection Lens, com cobertura objetiva de renderização/dispatcher; `OPEN` e `CAT` validados por marcadores determinísticos.
 
 
 ## Auditoria terminal — iteração atual
@@ -271,5 +271,5 @@
 - [x] Criar auditoria determinística das saídas críticas `OPEN`, `CAT`, `FIND`, `STATUS`, `SEED`, `POWER`, `LIFE`, `SYSLOG`, `NOTICES`, `BIOS`, `BOOT` e `REBOOT`, rejeitando referências a caminhos inexistentes ou estados incompatíveis com o runtime.
 - [x] Exibir no canal terminal indicadores explícitos e consistentes de `LAYER`, `LANGUAGE`, `NATIONALITY` e `FAMILY` quando um arquivo possuir contexto de passageiro, sem expor informação inexistente em arquivos puramente sistêmicos.
 - [x] Auditar contradições narrativas intencionais de versões, permissões e apagamentos, distinguindo-as de inconsistências acidentais de cadastro ou cronologia.
-- [x] Reexecutar testes, TypeScript, auditorias, build e revisão visual após as alterações; manter a validação manual do áudio remoto como pendência dependente da sessão do navegador.
+- [x] Reexecutar testes, TypeScript, auditorias, build e revisão visual após as alterações; a validação manual do áudio remoto foi concluída com gesto diegético no navegador e registrada em `validation-audio-2026-08-15.md`.
 - [x] Confirmar se a página inicial e os principais comandos permanecem integralmente diegéticos após a inclusão dos indicadores contextuais.
