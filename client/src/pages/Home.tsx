@@ -6,7 +6,7 @@
  */
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createSeedIndex, FilePayload, SeedFile, SeedIndex, listDirectory, normalizePath, resolveFile } from "@/lib/seedData";
-import { loadSeedSession, saveSeedSession } from "@/lib/seedPersistence";
+import { decodeSeedSession, downloadSeedSession, encodeSeedSession, loadSeedSession, saveSeedSession } from "@/lib/seedPersistence";
 import { createInitialShipSystems, repairGenerator, repairLifeSupport, ShipSystemsState, tickShipSystems } from "@/lib/shipSystems";
 import { compileSeedScript, runSeedScript, SeedScriptEffects } from "@/lib/seedScript";
 import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleNanoPanel, visibleNanoPanels, NanoPanel } from "@/lib/nanoPanels";
@@ -23,7 +23,7 @@ type SeedWorkspaceProgram = { path: string; code: string[]; compiled: boolean; c
 type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; workspacePrograms: SeedWorkspaceProgram[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; lockedUntil: Record<string, number>; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
 type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
-const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], lockedUntil: {}, recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
+export const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], lockedUntil: {}, recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -246,52 +246,19 @@ function tickRuntime(runtime: RuntimeState): RuntimeState {
 
 function helpLines(): TerminalLine[] {
   return [
-    { text: "COMMANDS // HYBRID SHELL", tone: "system" },
-    { text: "LS / DIR [path]       list directory entries", tone: "output" },
-    { text: "CD <path>             change directory", tone: "output" },
-    { text: "PWD                  print working directory", tone: "output" },
-    { text: "CAT / TYPE / OPEN     render a proprietary file", tone: "output" },
-    { text: "LIBRARY [term]        list searchable .BOOK knowledge records", tone: "output" },
-    { text: "BOOK <path> [page]     read a paginated .BOOK knowledge record", tone: "output" },
-    { text: "MSG [INBOX|GHOST]      inspect official or unregistered messages", tone: "output" },
-    { text: "TREE [path]           print a compact directory tree", tone: "output" },
-    { text: "FIND / SEARCH <term>  search indexed paths and metadata", tone: "output" },
-    { text: "filters: type= person= terminal= department= time= keyword= contradiction=", tone: "dim" },
-    { text: "DOCS [type]           list indexed corporate documents", tone: "output" },
-    { text: "PASSENGER <term>      print a passenger record", tone: "output" },
-    { text: "LANGUAGES             list passenger language distribution", tone: "output" },
-    { text: "USE <service> <key>   apply a saved credential to a target", tone: "amber" },
-    { text: "AUTH <user> <key>     attach a local user account", tone: "amber" },
-    { text: "FSCK [path]           inspect file integrity", tone: "output" },
-    { text: "RECOVER [path]        mount a recovered payload", tone: "amber" },
-    { text: "REBOOT [mode]         restart into BIOS / DIAGNOSTIC / SAFE", tone: "amber" },
-    { text: "BIOS [SET flag ON]    inspect or change firmware flags", tone: "amber" },
-    { text: "NVRAM [SET k v]       inspect boot variables", tone: "output" },
-    { text: "MOUNT / UMOUNT        attach or remove firmware volumes", tone: "output" },
-    { text: "BOOT [mode]           leave firmware and start a mode", tone: "amber" },
-    { text: "PLAY <file.MUS>       attach a music container to /dev/audio0", tone: "amber" },
-    { text: "PAUSE / RESUME        control the active audio process", tone: "amber" },
-    { text: "STOP                  terminate the active audio process", tone: "amber" },
-    { text: "AUDIO / PLAYER        inspect audio process and device state", tone: "output" },
-    { text: "RUN / EXEC / START    execute a .PROC program", tone: "amber" },
-    { text: "EDIT <path>            open or modify a Seed Script workspace", tone: "amber" },
-    { text: "COMPILE <path>         validate and derive a Seed Script .PROC", tone: "amber" },
-    { text: "APPS                  list registered applications in /apps", tone: "system" },
-    { text: "INSTALL <file.PROC>   register a discovered program in /apps", tone: "amber" },
-    { text: "UNINSTALL <app.PROC> remove a user-installed application", tone: "amber" },
-    { text: "SEED / STATUS         read live ship telemetry", tone: "output" },
-    { text: "POWER / GENERATORS    inspect generator and bus state", tone: "output" },
-    { text: "LIFE / O2             inspect life-support state", tone: "output" },
-    { text: "SYSLOG / NOTICES      read buffered system notices", tone: "output" },
-    { text: "REPAIR <target>       apply a maintenance procedure", tone: "amber" },
-    { text: "WHOAMI / SUDO         inspect or request authority", tone: "output" },
-    { text: "CLEAR / CLS            clear terminal output", tone: "output" },
-    { text: "", tone: "dim" },
+    { text: "COMMANDS // HYBRID SHELL // LEGACY INDEX", tone: "system" },
+    { text: "LS CD PWD OPEN FIND SEARCH AUTH RUN REBOOT", tone: "output" },
+    { text: "USE FSCK RECOVER BIOS MOUNT BOOK PLAY", tone: "amber" },
+    { text: "POWER LIFE SYSLOG REPAIR WHOAMI", tone: "output" },
+    { text: "EXPORT IMPORT CLEAR", tone: "dim" },
+    { text: "syntax registry :: incomplete / aliases preserved", tone: "dim" },
+    { text: "filters :: type= person= terminal= department= time= keyword= contradiction=", tone: "dim" },
+    { text: "for mounted records, inspect local metadata and command response", tone: "dim" },
     { text: "legacy aliases: linux / dos / seed", tone: "dim" },
   ];
 }
 
-function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: RuntimeState): { nextCwd: string; lines: TerminalLine[]; nextRuntime?: RuntimeState; focus?: string } {
+export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: RuntimeState): { nextCwd: string; lines: TerminalLine[]; nextRuntime?: RuntimeState; focus?: string } {
   const input = raw.trim();
   const [command = "", ...args] = input.split(/\s+/);
   const normalized = command.toLowerCase();
@@ -305,8 +272,10 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
   if (["help", "?"].includes(normalized)) return result(helpLines());
   if (["clear", "cls"].includes(normalized)) return { nextCwd: cwd, lines: [] };
   const firmwareCommands = ["help", "?", "clear", "cls", "reboot", "bios", "nvram", "mount", "umount", "boot", "fsck", "check", "recover", "repair", "seed", "status", "power", "generators", "life", "o2", "syslog", "notices", "whoami", "pwd"];
-  if (runtime.boot !== "RUNNING" && !firmwareCommands.includes(normalized)) return result([{ text: `shell: ${runtime.boot.toLowerCase()} state :: command bus unavailable`, tone: "error" }, { text: "firmware commands only", tone: "dim" }]);
+  if (runtime.boot !== "RUNNING" && !firmwareCommands.includes(normalized) && !["export", "import"].includes(normalized)) return result([{ text: `shell: ${runtime.boot.toLowerCase()} state :: command bus unavailable`, tone: "error" }, { text: "firmware commands only", tone: "dim" }]);
   if (["pwd"].includes(normalized)) return result([{ text: cwd, tone: "output" }]);
+  if (normalized === "export") return result([{ text: "EXPORT CHANNEL :: local envelope requested", tone: "system" }, { text: "transport :: browser download", tone: "output" }, { text: "payload :: current session snapshot", tone: "dim" }]);
+  if (normalized === "import") return result([{ text: "IMPORT CHANNEL :: use IMPORT <SEED_SESSION_V1 envelope>", tone: "amber" }]);
   if (normalized === "reboot") {
     const requested = (args[0] ?? "normal").toLowerCase();
     const boot: BootState = requested === "bios" ? "BIOS" : requested === "diagnostic" || requested === "diag" ? "DIAGNOSTIC" : requested === "safe" || requested === "safe_mode" ? "SAFE_MODE" : requested === "recovery" ? "RECOVERY" : requested === "halt" ? "HALTED" : "RUNNING";
@@ -727,6 +696,34 @@ export default function Home() {
   const executeCommand = (rawInput: string) => {
     const raw = rawInput.trim();
     if (!raw) return;
+    const [verb = "", ...commandArgs] = raw.split(/\s+/);
+    if (verb.toLowerCase() === "import") {
+      const imported = decodeSeedSession<SessionSnapshot>(commandArgs.join(""));
+      const restored = imported ? restoreSnapshot(imported, index) : null;
+      if (!restored) {
+        setLines((current) => [...current, { text: prompt(cwd, raw, runtime), tone: "prompt" }, { text: "import: invalid or incompatible session envelope", tone: "error" }]);
+        setHistory((current) => [...current.filter((entry) => entry !== raw), raw].slice(-80));
+        setCommand("");
+        return;
+      }
+      setCwd(restored.cwd);
+      setRuntime(restored.runtime);
+      setHistory(restored.history);
+      setFocusPath(restored.focusPath);
+      setLines([...restored.lines, { text: "IMPORT :: session envelope mounted", tone: "system" }]);
+      setHistoryIndex(-1);
+      setCommand("");
+      return;
+    }
+    if (verb.toLowerCase() === "export") {
+      const encoded = encodeSeedSession(snapshotForStorage(cwd, runtime, history, focusPath, lines));
+      const filename = commandArgs[0] || "seed-session.seed";
+      const downloaded = downloadSeedSession(encoded, filename.endsWith(".seed") ? filename : `${filename}.seed`);
+      setLines((current) => [...current, { text: prompt(cwd, raw, runtime), tone: "prompt" }, { text: downloaded ? `EXPORT :: ${filename.endsWith(".seed") ? filename : `${filename}.seed`} / written` : "export: browser transport unavailable", tone: downloaded ? "system" : "error" }]);
+      setHistory((current) => [...current.filter((entry) => entry !== raw), raw].slice(-80));
+      setCommand("");
+      return;
+    }
     const result = runCommand(raw, cwd, runtimeIndex, runtime);
     setCwd(result.nextCwd);
     setRuntime(result.nextRuntime ?? runtime);
@@ -735,8 +732,8 @@ export default function Home() {
     setHistory((current) => [...current.filter((entry) => entry !== raw), raw].slice(-80));
     setHistoryIndex(-1);
     setCommand("");
-    const [verb, ...args] = raw.split(/\s+/);
-    if (["run", "exec", "start"].includes(verb.toLowerCase())) {
+    const [executedVerb, ...args] = raw.split(/\s+/);
+    if (["run", "exec", "start"].includes(executedVerb.toLowerCase())) {
       const app = resolveAppFile(runtimeIndex, args.join(" "), cwd);
       if (app?.extension === ".PROC") openNanoPanel(app.path);
     }

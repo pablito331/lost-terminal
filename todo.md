@@ -46,7 +46,7 @@
 - [x] Salvar silenciosamente após cada comando que alterar estado, incluindo AUTH, USE, RECOVER, RUN, REBOOT, BIOS, NVRAM, MOUNT, BOOT e áudio.
 - [x] Restaurar a sessão automaticamente ao abrir o Seed OS, sem tela de login, modal, tutorial ou mensagem externa de carregamento.
 - [x] Versionar snapshots e ignorar dados incompatíveis ou corrompidos sem quebrar o boot do sistema.
-- [ ] Criar exportação e importação técnica de sessão para recuperação manual quando o jogador limpar dados do navegador.
+- [x] Criar exportação e importação técnica de sessão para recuperação manual quando o jogador limpar dados do navegador.
 - [x] Não armazenar fontes de áudio grandes no snapshot; persistir apenas caminho, estado, posição e metadados necessários.
 - [x] Documentar que limpar dados do site, usar navegação privada ou trocar de navegador pode apagar o progresso local.
 - [x] Testar fechamento da aba, reinicialização, falha de escrita, restauração e migração entre versões do Seed OS.
@@ -121,7 +121,7 @@
 - [ ] Criar contas de usuários com identificador, nome, hash parcial, senha possível, salt, status, tentativas e terminal de origem.
 - [x] Criar arquivos corrompidos com setores ausentes, caracteres inválidos, timestamps quebrados, payloads truncados e caminhos recuperáveis.
 - [x] Implementar respostas técnicas diferentes para senha válida, senha inválida, usuário inexistente, arquivo bloqueado e arquivo corrompido.
-- [ ] Registrar tentativas de acesso no VFS e permitir bloqueios temporários, alertas silenciosos e mudanças de autoridade; falta implementar e testar o bloqueio temporário completo.
+- [x] Registrar tentativas de acesso no VFS e permitir bloqueios temporários, alertas silenciosos e mudanças de autoridade; cobertura validada no fluxo de AUTH e expiração por relógio.
 - [x] Permitir que o jogador deduza credenciais por documentos, teste combinações e encontre falhas internas sem receber uma solução explícita.
 - [ ] Criar comandos e operações internas que possam explorar permissões mal configuradas, caches, arquivos temporários e processos não assinados.
 - [x] Fazer `CAT`, `OPEN`, `RUN`, `USE` e `SUDO` respeitarem a camada de acesso e o estado atual da sessão.
@@ -129,14 +129,14 @@
 - [x] Garantir que mensagens de intrusão permaneçam técnicas e não usem linguagem de missão, dica, puzzle ou recompensa.
 - [x] Remover termos como “jogo”, “missão”, “pista”, “evidência”, “objetivo”, “progresso” e “quebra-cabeça” de toda saída visível do Seed OS.
 - [x] Não mostrar tutorial, onboarding, lista de objetivos, dicas contextuais, botão de ajuda, marcador de descoberta ou confirmação narrativa de acerto.
-- [ ] Fazer `HELP` exibir apenas uma referência técnica incompleta, como documentação legada de um shell real; falta auditar a saída atual.
+- [x] Fazer `HELP` exibir apenas uma referência técnica incompleta, como documentação legada de um shell real; saída coberta por `isLegacyHelp` e matriz de comandos.
 - [x] Fazer erros, permissões e resultados de comandos soarem como respostas de sistema, sem explicar a intenção narrativa ou sugerir a próxima ação.
 - [x] Remover links de interface e textos que chamem relações de “pistas”; referências devem aparecer apenas como caminhos, IDs, timestamps e metadados.
 - [x] Manter contradições, senhas e relações escondidas em documentos ordinários, sem destacar o que é importante.
 - [x] Fazer programas pessoais parecerem utilitários reais, arquivos corrompidos ou ferramentas específicas de trabalho, sem chamar o jogador para executá-los.
 - [x] Garantir que o terminal não informe quando uma cadeia narrativa foi concluída; apenas o estado do sistema deve mudar.
 - [x] Testar a tela inicial para assegurar que ela parece um sistema recuperado, não uma interface de jogo.
-- [ ] Criar schema documental com `documentType`, `eventTime`, `authorId`, `recipientIds`, `department`, `accessTerminal`, `supersedes` e `links`; falta comprovar os campos no código.
+- [x] Criar schema documental com `documentType`, `eventTime`, `authorId`, `recipientIds`, `department`, `accessTerminal`, `supersedes` e `links`; contrato validado por `documentSchemaIssues`.
 - [x] Adicionar logs técnicos do sistema, reinicializações, falhas de subsistemas, alterações de permissões e eventos de suporte à vida.
 - [x] Adicionar logs de acesso com usuário, terminal, caminho, ação, resultado, horário e origem de sessão.
 - [x] Criar atas de reunião com participantes, pauta, decisões, dissensos e itens de ação pendentes.
@@ -144,7 +144,7 @@
 - [x] Criar memorandos enviados com remetente, destinatários, assunto, classificação, anexos e resposta esperada.
 - [x] Ligar cada documento a passageiros, famílias, departamentos, arquivos pessoais, arquivos corporativos e incidentes relevantes.
 - [x] Manter uma linha do tempo coerente, incluindo documentos apagados, sobrescritos ou com horários incompatíveis.
-- [ ] Fazer `FIND`/`SEARCH` localizar documentos por tipo, pessoa, terminal, departamento, horário, palavra-chave e contradição; falta cobrir os filtros completos.
+- [x] Fazer `FIND`/`SEARCH` localizar documentos por tipo, pessoa, terminal, departamento, horário, palavra-chave e contradição; filtros indexados e cobertura determinística adicionada.
 - [x] Usar atas, advertências e memorandos como referências que abrem caminhos, credenciais ou interpretações alternativas — nunca como texto isolado.
 - [ ] Modelar inventário pessoal por passageiro: diário, documento, foto, vídeo, música, jogo, programa, credencial e ferramenta; fotos, jogos e ferramentas ainda precisam ser comprovados.
 - [x] Distinguir arquivos passivos de arquivos executáveis e definir metadados de ação, permissão, dependências e efeitos na nave.
@@ -165,7 +165,7 @@
 - [x] Manter registros corporativos Seed Corp em idioma operacional comum, ligados aos arquivos pessoais por `ownerId`, `familyId`, `language` e `corporateRecordIds`.
 - [ ] Adicionar filtros e indicadores de idioma, nacionalidade, família e camada `PERSONAL`/`CORPORATE` ao terminal e ao inspetor; falta comprovar a cobertura completa na interface.
 - [x] Corrigir links narrativos para garantir que cada arquivo citado exista e que as relações familiares formem uma rede navegável.
-- [ ] Testar os comandos de busca por pessoa, família, idioma, nacionalidade e caminho corporativo; faltam testes objetivos de família, nacionalidade e caminho corporativo.
+- [x] Testar os comandos de busca por pessoa, família, idioma, nacionalidade e caminho corporativo; busca por pessoa, família, idioma e metadados corporativos validada no índice.
 - [x] Validar a nova contagem de arquivos, a tela responsiva e o build antes de salvar o próximo checkpoint.
 
 
@@ -238,3 +238,7 @@
 - [ ] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade.
 - [ ] Formalizar isolamento completo de processos .PROC com PID, memória, portas e encerramento seguro.
 - [ ] Adicionar lentes visuais dedicadas para payloads .VIS e .REC no Connection Lens.
+
+- [x] Adicionar testes objetivos para AUTH cobrindo tentativas falhas, bloqueio temporário, expiração por relógio, aviso silencioso e mudança de autoridade após credenciais válidas.
+- [x] Reduzir HELP a uma referência técnica incompleta/legada ou ajustar sua política com teste forte de diegese, sem catalogar o sistema como tutorial.
+- [x] Adicionar testes determinísticos de FIND/SEARCH para `family=`, `language=`, `nationality=`, `path=` e combinações de filtros.

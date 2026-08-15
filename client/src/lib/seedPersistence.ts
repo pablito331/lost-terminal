@@ -88,3 +88,37 @@ export async function saveSeedSession<T>(payload: T): Promise<void> {
     // The fallback remains available when IndexedDB is blocked or unavailable.
   }
 }
+
+
+const TRANSFER_PREFIX = "SEED_SESSION_V1:";
+
+export function encodeSeedSession<T>(payload: T): string {
+  const json = JSON.stringify(payload);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return `${TRANSFER_PREFIX}${btoa(binary)}`;
+}
+
+export function decodeSeedSession<T>(encoded: string): T | null {
+  try {
+    if (!encoded.startsWith(TRANSFER_PREFIX)) return null;
+    const binary = atob(encoded.slice(TRANSFER_PREFIX.length));
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as T;
+  } catch {
+    return null;
+  }
+}
+
+export function downloadSeedSession(encoded: string, filename = "seed-session.seed") {
+  if (typeof document === "undefined") return false;
+  const blob = new Blob([encoded], { type: "application/x-seed-session" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  return true;
+}

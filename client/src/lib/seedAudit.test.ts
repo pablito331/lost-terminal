@@ -11,6 +11,14 @@ describe("Seed OS audit helpers", () => {
     expect(results.every((file) => (file.ownerId === "passenger-014" || file.authorId === "passenger-014" || file.recipientIds?.includes("passenger-014")) && file.extension === ".SCR")).toBe(true);
   });
 
+  it("searches family, language, nationality and corporate path fields", () => {
+    expect(searchSeedFiles(index, "family=family-001").some((file) => file.familyId === "family-001")).toBe(true);
+    expect(searchSeedFiles(index, "keyword=fr-FR").some((file) => file.language === "fr-FR" || file.keywords.includes("fr-FR"))).toBe(true);
+    expect(searchSeedFiles(index, "keyword=BR").some((file) => file.keywords.includes("BR") || file.summary.includes("BR"))).toBe(true);
+    expect(searchSeedFiles(index, "path=/corporate/passenger-014").every((file) => file.path.includes("/corporate/passenger-014"))).toBe(true);
+    expect(searchSeedFiles(index, "path=/corporate type=.HLT").every((file) => file.path.startsWith("/corporate/") && file.extension === ".HLT")).toBe(true);
+  });
+
   it("covers the documented corporate metadata contract", () => {
     expect(documentSchemaIssues(index)).toEqual([]);
   });
@@ -19,6 +27,7 @@ describe("Seed OS audit helpers", () => {
     const inventory = personalInventory(index, "passenger-014");
     expect(inventory.files.length).toBeGreaterThan(0);
     expect(inventory.hasAudio).toBe(true);
+    expect(inventory.hasVisual).toBe(true);
     expect(inventory.hasProgram).toBe(true);
     expect(inventory.hasCredential).toBe(true);
   });
@@ -30,10 +39,12 @@ describe("Seed OS audit helpers", () => {
     expect(coverage.time).toBe(index.files.length);
   });
 
-  it("recognizes a terse diegetic reference instead of a tutorial", () => {
+  it("recognizes only a short incomplete legacy reference as HELP", () => {
     expect(isLegacyHelp([
-      { text: "COMMANDS // HYBRID SHELL" },
+      { text: "COMMANDS // HYBRID SHELL // LEGACY INDEX" },
+      { text: "syntax registry :: incomplete / aliases preserved" },
       { text: "legacy aliases: linux / dos / seed" },
     ])).toBe(true);
+    expect(isLegacyHelp(Array.from({ length: 20 }, (_, index) => ({ text: `COMMAND ${index}` })))).toBe(false);
   });
 });

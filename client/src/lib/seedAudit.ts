@@ -3,11 +3,14 @@ import type { SeedFile, SeedIndex } from "./seedData";
 export type SeedSearchFilters = {
   type?: string;
   person?: string;
+  family?: string;
+  nationality?: string;
   terminal?: string;
   department?: string;
   time?: string;
   keyword?: string;
   contradiction?: string;
+  path?: string;
 };
 
 const searchable = (file: SeedFile) => [
@@ -29,7 +32,7 @@ export function parseSeedSearch(query: string): SeedSearchFilters {
   const filters: SeedSearchFilters = {};
   const free: string[] = [];
   for (const token of query.trim().split(/\s+/).filter(Boolean)) {
-    const match = token.match(/^(type|person|terminal|department|time|keyword|contradiction)=(.+)$/i);
+    const match = token.match(/^(type|person|family|nationality|terminal|department|time|keyword|contradiction|path)=(.+)$/i);
     if (match) filters[match[1].toLowerCase() as keyof SeedSearchFilters] = match[2].toLowerCase();
     else free.push(token.toLowerCase());
   }
@@ -42,7 +45,10 @@ export function searchSeedFiles(index: SeedIndex, query: string): SeedFile[] {
   return index.files.filter((file) => {
     const fields = {
       type: [file.extension, file.kind, file.documentType ?? ""].join(" ").toLowerCase(),
+      path: file.path.toLowerCase(),
       person: [file.ownerId, file.authorId, ...(file.recipientIds ?? [])].join(" ").toLowerCase(),
+      family: (file.familyId ?? "").toLowerCase(),
+      nationality: searchable(file),
       terminal: (file.accessTerminal ?? "").toLowerCase(),
       department: (file.department ?? "").toLowerCase(),
       time: [file.eventTime ?? "", file.updated].join(" ").toLowerCase(),
@@ -88,5 +94,5 @@ export function searchFieldCoverage(index: SeedIndex): Record<string, number> {
 
 export function isLegacyHelp(lines: Array<{ text: string }>): boolean {
   const text = lines.map((line) => line.text).join(" ").toLowerCase();
-  return text.includes("commands // hybrid shell") && text.includes("legacy aliases") && !text.includes("tutorial") && !text.includes("mission");
+  return lines.length <= 12 && text.includes("commands // hybrid shell") && text.includes("legacy index") && text.includes("syntax registry :: incomplete") && text.includes("legacy aliases") && !text.includes("tutorial") && !text.includes("mission") && !text.includes("objective");
 }
