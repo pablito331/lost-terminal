@@ -173,3 +173,12 @@
 - A auditoria determinística confirmou `BOOTSTRAP_CREDENTIAL=/personal/passenger-014/saved-passwords.SCR`, `BOOTSTRAP_CLEARANCE=GUEST` e o par `I.CHEN / TIDAL-04` válido.
 - `pnpm check`, `pnpm build` e `pnpm exec tsx scripts/verify-seed-ecosystem.ts` passaram. Permanece somente o aviso não bloqueante do bundle JavaScript acima de 500 kB.
 - Captura desktop durante o POST confirmou que a superfície do terminal continua íntegra após a alteração do VFS.
+
+## Expansão editorial — livros e diários extensos
+
+- A biblioteca em `/library` permanece composta por `15` obras `.BOOK`; todas receberam paginação com seis ou mais páginas, folha de rosto, índice, capítulos, notas de leitura e referências internas.
+- O diário de Ivo Chen (`/personal/passenger-014/diary.SCR`) agora indexa `12` registros datados. As sete entradas anteriores aprofundam, em francês, a observação de telemetria, mensageria, família e uma ferramenta técnica incompleta, sem transformar o diário em solução explícita.
+- Os demais passageiros mantêm séries cronológicas em seus idiomas maternos. Os índices de diário passaram a calcular o número real de entradas e a orientar a abertura até o último dia materializado, sem referência fixa a cinco arquivos.
+- A auditoria confirmou `BOOKS=15`, `PAGINATED_BOOKS=15`, `IVO_JOURNAL_ENTRIES=12` e `SEED_ECOSYSTEM_AUDIT=PASS`. `pnpm check` e `pnpm build` concluíram sem erros; o aviso de bundle acima de 500 kB permanece não bloqueante.
+- O comando `BOOK <path> <page>` passou a reutilizar a mesma verificação de clearance e integridade de `OPEN`; volumes CREW, OFFICER e ROOT não podem mais ser lidos por paginação direta a partir de uma sessão GUEST.
+- A entrada GUEST `/library/README.SCR` confirma os caminhos de descoberta (`LS /library`, `TREE /library`, `FIND .BOOK`, `LIBRARY`) e a sintaxe paginada sem assinalar uma rota narrativa obrigatória.

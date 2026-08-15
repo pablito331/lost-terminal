@@ -13,6 +13,11 @@
 - [ ] Garantir uma primeira cadeia de acesso inteiramente legível por GUEST, com pista, credencial, alvo e elevação verificáveis antes de qualquer arquivo CREW.
 - [ ] Auditar cada credencial contextual para que sua fonte tenha clearance igual ou inferior ao nível exigido para descobri-la, evitando bloqueios circulares de progressão.
 - [ ] Criar validação automatizada que simule o primeiro acesso GUEST e rejeite credenciais cuja única fonte esteja protegida por CREW, OFFICER ou ROOT.
+- [ ] Expandir diários centrais em séries datadas de múltiplas entradas, com evolução emocional, técnica e relacional entre dias, sem contradizer a cronologia do VFS.
+- [ ] Transformar os livros `.BOOK` em obras extensas com páginas ou capítulos completos, índice, numeração, referências internas, apêndices e exemplos utilizáveis.
+- [ ] Implementar leitura paginada no terminal (`BOOK <arquivo> <página>`) e preservar a posição de leitura por sessão sem criar uma superfície gráfica paralela.
+- [ ] Tornar `/library` e o comando `LIBRARY` descobríveis por navegação, `TREE`, `FIND`, `SEARCH` e documentação de sistema, mantendo o acervo vasto sem destacar documentos obrigatórios.
+- [ ] Auditar o volume mínimo, a continuidade e a qualidade linguística dos diários e livros antes de adicionar novas cadeias narrativas.
 - [ ] Catalogar os aplicativos `.PROC` já funcionais e definir quais ficam disponíveis no `/apps` desde o primeiro boot.
 - [ ] Implementar instalação diegética de `.PROC` descobertos nos arquivos pessoais, com verificação de dependências, permissões, integridade e compatibilidade.
 - [ ] Persistir o inventário de aplicativos instalados no snapshot local e reconstruir o diretório `/apps` após reload ou reboot.

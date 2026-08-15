@@ -12,6 +12,8 @@ const messages = index.files.filter((file) => file.extension === ".MSG");
 const videos = index.files.filter((file) => file.extension === ".VIS" && file.directory === "/media/public");
 const languages = new Set(knowledge.map((file) => file.language));
 const brokenContinuity = validateSeedContinuity(index);
+const paginatedBooks = knowledge.filter((file) => file.payload.kind === "book" && (file.payload.pages?.length ?? 0) >= 6);
+const ivoJournal = index.files.filter((file) => file.path.startsWith("/personal/passenger-014/journal/day-") && file.extension === ".SCR");
 
 const repairExample = [
   'let network = seed("network")',
@@ -34,6 +36,8 @@ const failures = [
   bootstrapCredential?.clearance !== "GUEST" ? `BOOTSTRAP_CLEARANCE=${bootstrapCredential?.clearance ?? "MISSING"}` : "",
   bootstrapCredential?.payload.kind !== "credential" || bootstrapCredential.payload.username !== "I.CHEN" || bootstrapCredential.payload.secret !== "TIDAL-04" ? "BOOTSTRAP_AUTH=INVALID" : "",
   knowledge.length < 10 ? `BOOK_COUNT=${knowledge.length}` : "",
+  paginatedBooks.length !== knowledge.length ? `PAGINATED_BOOKS=${paginatedBooks.length}/${knowledge.length}` : "",
+  ivoJournal.length < 12 ? `IVO_JOURNAL_ENTRIES=${ivoJournal.length}` : "",
   messages.length < 5 ? `MSG_COUNT=${messages.length}` : "",
   videos.length < 2 ? `PUBLIC_VIS_COUNT=${videos.length}` : "",
   missingLanguages.length ? `MISSING_LANGUAGES=${missingLanguages.join(",")}` : "",
@@ -44,6 +48,8 @@ const failures = [
 ].filter(Boolean);
 
 console.log(`BOOKS=${knowledge.length}`);
+console.log(`PAGINATED_BOOKS=${paginatedBooks.length}`);
+console.log(`IVO_JOURNAL_ENTRIES=${ivoJournal.length}`);
 console.log(`BOOTSTRAP_CREDENTIAL=${bootstrapCredential?.path ?? "MISSING"}`);
 console.log(`BOOTSTRAP_CLEARANCE=${bootstrapCredential?.clearance ?? "MISSING"}`);
 console.log(`MESSAGES=${messages.length}`);

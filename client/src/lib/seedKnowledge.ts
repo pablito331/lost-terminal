@@ -18,6 +18,50 @@ type BookSpec = {
   keywords: string[];
 };
 
+function splitForPages(lines: string[], target = 620): string[][] {
+  const pages: string[][] = [];
+  let page: string[] = [];
+  let length = 0;
+  const commit = () => { if (page.length) pages.push(page); page = []; length = 0; };
+  for (const line of lines) {
+    const parts = line.includes("\n") ? line.split("\n") : [line];
+    for (const part of parts) {
+      const next = part.trim();
+      if (!next) continue;
+      if (length && length + next.length > target) commit();
+      page.push(next);
+      length += next.length;
+    }
+  }
+  commit();
+  return pages;
+}
+
+function makeBookPages(spec: BookSpec, references: string[]) {
+  const headings = spec.chapters.filter((entry) => entry.includes("//"));
+  const pages: Array<{ number: number; heading: string; lines: string[] }> = [
+    { number: 1, heading: "CATALOGUE LEAF // 01", lines: [spec.title, `AUTHOR     : ${spec.author}`, `SUBJECT    : ${spec.subject.toUpperCase()}`, `LANGUAGE   : ${spec.language}`, `CLEARANCE  : ${spec.level}`, "This recovered edition preserves its original instructional order. Metadata and references are searchable; the arguments remain in the language of publication."] },
+    { number: 2, heading: "TABLE OF CONTENTS // 02", lines: headings.map((heading, index) => `${String(index + 1).padStart(2, "0")}  ${heading}`) },
+  ];
+  let currentHeading = "READING NOTES";
+  let currentLines: string[] = [];
+  const flush = () => {
+    if (!currentLines.length) return;
+    for (const lines of splitForPages(currentLines)) pages.push({ number: pages.length + 1, heading: currentHeading, lines });
+    currentLines = [];
+  };
+  for (const entry of spec.chapters) {
+    if (entry.includes("//")) {
+      flush();
+      currentHeading = entry;
+    } else currentLines.push(entry);
+  }
+  flush();
+  pages.push({ number: pages.length + 1, heading: "EDITORIAL MARGIN", lines: ["This copy was retained because its procedures describe conditions, limits and evidence rather than promising outcomes.", `READING PATH : ${spec.path}`, "Cross-reference the cited VFS records before treating any statement as current ship state."] });
+  if (references.length) pages.push({ number: pages.length + 1, heading: "REFERENCES // LINKED VOLUMES", lines: references.map((reference, index) => `${String(index + 1).padStart(2, "0")}  ${reference}`) });
+  return pages.map((page, index) => ({ ...page, number: index + 1 }));
+}
+
 function file(input: Omit<SeedFile, "directory" | "name"> & { path: string; directory?: string; name?: string }): SeedFile {
   const slash = input.path.lastIndexOf("/");
   return { ...input, directory: slash <= 0 ? "/" : input.path.slice(0, slash), name: input.path.slice(slash + 1) };
@@ -25,17 +69,18 @@ function file(input: Omit<SeedFile, "directory" | "name"> & { path: string; dire
 
 function book(spec: BookSpec): SeedFile {
   const references = spec.references ?? [];
+  const pages = makeBookPages(spec, references);
   return file({
     path: spec.path,
     extension: ".BOOK",
     kind: "book",
-    size: `${Math.max(2, Math.round(spec.chapters.join(" ").length / 15))} KB`,
+    size: `${Math.max(4, Math.round(pages.flatMap((page) => page.lines).join(" ").length / 15))} KB`,
     updated: "T-18:00:00",
     layer: "SYSTEM",
     language: spec.language,
     summary: `${spec.title} // ${spec.subject} // ${spec.language}`,
     clearance: spec.clearance ?? (spec.level === "INTRO" ? "GUEST" : spec.level),
-    payload: { kind: "book", language: spec.language, title: spec.title, author: spec.author, subject: spec.subject, level: spec.level, chapters: spec.chapters, references },
+    payload: { kind: "book", language: spec.language, title: spec.title, author: spec.author, subject: spec.subject, level: spec.level, chapters: spec.chapters, pages, references },
     links: references.map((target, index) => ({ target, label: `REF_${String(index + 1).padStart(2, "0")}`, relation: "referência técnica" })),
     keywords: [...spec.keywords, spec.title, spec.author, spec.subject, spec.language, "book", "library"],
     system: true,
@@ -205,5 +250,43 @@ export function createKnowledgeFiles(crew: CrewMember[]): SeedFile[] {
     publicVideo("/media/public/mission-overview.VIS", "en-US", "SEED CORP // MISSION OVERVIEW", "Public briefing: the colony vessel and its destination before the sleep cycle.", ["DURATION : 07:14", "SUBTITLES: EN-US / PT-BR / ES-MX", "DELIVERY : PUBLIC QUEUE", "STATUS   : UNOPENED"], [{ target: "/seed/manifest.SCR", label: "MANIFEST", relation: "mission population" }, { target: "/comms/seed/mission-brief-001.MSG", label: "BRIEF", relation: "delivery record" }], ["mission", "overview", "colony"]),
     publicVideo("/media/public/news-archive-17.VIS", "pt-BR", "SEED NEWS // ARCHIVE 17", "Noticiário público preservado antes do adormecimento criogênico coletivo.", ["DURATION : 02:31", "ANCHOR   : L. MENDES", "AUDIO    : PRESENT", "STATUS   : UNOPENED"], [{ target: "/comms/seed/arrival-window-closed.MSG", label: "ARRIVAL", relation: "same broadcast window" }], ["news", "public", "arrival"]),
   ];
-  return [...books.map(book), ...official, ...ghost, ...videos];
+  const libraryGuide = file({
+    path: "/library/README.SCR",
+    extension: ".SCR",
+    kind: "text",
+    size: "2.8 KB",
+    updated: "T-18:00:00",
+    layer: "SYSTEM",
+    language: "SEED-OPS",
+    summary: "Terminal Library Orientation // catalogue, reading protocol and cross-reference rules.",
+    clearance: "GUEST",
+    payload: {
+      kind: "text",
+      language: "SEED-OPS",
+      lines: [
+        "SEED OS // TERMINAL LIBRARY ORIENTATION",
+        "LOCATION  : /library",
+        "CATALOGUE : LIBRARY [term]",
+        "BROWSE    : LS /library  |  TREE /library  |  FIND .BOOK",
+        "READ      : BOOK <path> [page]",
+        "",
+        "This library was retained as a distributed collection rather than a curriculum. Books are filed by subject, language and clearance; no volume is marked as required for a current emergency.",
+        "",
+        "A .BOOK opens on its catalogue leaf. Page 02 contains its table of contents. Use a page number to continue reading without printing the entire volume into the active terminal buffer.",
+        "",
+        "Technical books describe observations, prerequisites and procedures. They may conflict with later logs, firmware state or local conditions. Read the cited records before using a command as if it were current.",
+        "",
+        "LANGUAGES : PT-BR / ES-MX / EN-US / FR-FR / DE-DE / JA-JP / ZH-CN / AR-EG",
+        "SHELVES   : seed-os / programming / engineering / life-sciences / navigation / mathematics / communications / culture / maintenance",
+      ],
+    },
+    links: [
+      { target: "/library/seed-os/fallback-shell.BOOK", label: "FALLBACK_SHELL", relation: "introductory system volume" },
+      { target: "/library/programming/seed-script-field-guide.BOOK", label: "SEED_SCRIPT", relation: "programmable systems volume" },
+      { target: "/library/engineering/repair-paths.BOOK", label: "REPAIR_PATHS", relation: "maintenance reference" },
+    ],
+    keywords: ["library", "catalogue", "books", "read", "pages", "seed os", "orientation"],
+    system: true,
+  });
+  return [libraryGuide, ...books.map(book), ...official, ...ghost, ...videos];
 }

@@ -88,6 +88,23 @@ function identityLabel(value: string | undefined, index?: SeedIndex) {
   return member ? `${member.handle} / ${member.name}` : value;
 }
 
+function renderBookPage(payload: Extract<FilePayload, { kind: "book" }>, requestedPage = 1): TerminalLine[] {
+  const pages = payload.pages?.length ? payload.pages : [{ number: 1, heading: "CONTENTS", lines: payload.chapters }];
+  const page = pages[Math.min(Math.max(1, requestedPage), pages.length) - 1];
+  return [
+    { text: `BOOK :: ${payload.title}`, tone: "system" },
+    { text: `LANGUAGE :: ${payload.language}    LEVEL :: ${payload.level}    PAGE :: ${page.number}/${pages.length}`, tone: "dim" },
+    { text: `AUTHOR   :: ${payload.author}`, tone: "output" },
+    { text: `SUBJECT  :: ${payload.subject}`, tone: "output" },
+    { text: "", tone: "dim" },
+    { text: page.heading, tone: "amber" },
+    { text: "", tone: "dim" },
+    ...page.lines.map((line) => ({ text: line, tone: "output" as Tone })),
+    { text: "", tone: "dim" },
+    { text: `READER :: BOOK <path> <page 1-${pages.length}>`, tone: "dim" },
+  ];
+}
+
 function renderPayload(payload: FilePayload, index?: SeedIndex): TerminalLine[] {
   if (payload.kind === "text") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, ...payload.lines.map((text) => ({ text, tone: "output" as Tone }))];
   if (payload.kind === "audio") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, { text: `AUDIO BUFFER :: ${payload.duration}`, tone: "system" }, ...(payload.audioType === "MUSIC" ? [{ text: `CONTAINER :: .MUS / ${payload.codec ?? "SEED-AUDIO"}`, tone: "dim" as Tone }, { text: `TITLE     :: ${payload.title ?? "UNNAMED"}`, tone: "output" as Tone }, { text: `ARTIST    :: ${payload.artist ?? "UNKNOWN"}`, tone: "output" as Tone }] : []), { text: "", tone: "dim" }, { text: payload.transcript, tone: "output" }];
@@ -95,7 +112,7 @@ function renderPayload(payload: FilePayload, index?: SeedIndex): TerminalLine[] 
   if (payload.kind === "health") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, ...payload.vitals.map((vital) => ({ text: `${vital.label.padEnd(18)} : ${vital.value}`, tone: vital.status === "critical" ? "error" as Tone : vital.status === "warning" ? "amber" as Tone : "output" as Tone })), { text: "", tone: "dim" }, { text: payload.note, tone: "output" }];
   if (payload.kind === "incident") return [{ text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, { text: `SEVERITY :: ${payload.severity}`, tone: payload.severity === "CRITICAL" ? "error" : "amber" }, ...payload.events.map((event) => ({ text: event, tone: "output" as Tone }))];
   if (payload.kind === "program") return [{ text: `PROGRAM :: ${payload.programType}`, tone: "system" }, { text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, ...payload.code.map((line) => ({ text: line, tone: "output" as Tone })), ...(payload.action ? [{ text: `ACTION :: ${payload.action.label}`, tone: "amber" as Tone }, { text: `REQUIRES :: ${(payload.action.requires ?? []).join(", ") || "NONE"}`, tone: "dim" as Tone }] : [])];
-  if (payload.kind === "book") return [{ text: `BOOK :: ${payload.title}`, tone: "system" }, { text: `LANGUAGE :: ${payload.language}    LEVEL :: ${payload.level}`, tone: "dim" }, { text: `AUTHOR   :: ${payload.author}`, tone: "output" }, { text: `SUBJECT  :: ${payload.subject}`, tone: "output" }, { text: "", tone: "dim" }, ...payload.chapters.map((chapter, index) => ({ text: `${String(index + 1).padStart(2, "0")} :: ${chapter}`, tone: "output" as Tone })), ...(payload.references.length ? [{ text: "", tone: "dim" as Tone }, { text: `REFERENCES :: ${payload.references.join(" | ")}`, tone: "dim" as Tone }] : [])];
+  if (payload.kind === "book") return renderBookPage(payload);
   if (payload.kind === "message") return [{ text: `MESSAGE :: ${payload.channel} / ${payload.status}`, tone: payload.channel === "GHOST" ? "error" : "system" }, { text: `LANGUAGE :: ${payload.language}    SENT :: ${payload.sentAt}`, tone: "dim" }, { text: `FROM     :: ${identityLabel(payload.senderId, index)}`, tone: "output" }, { text: `TO       :: ${payload.recipientIds.map((recipient) => identityLabel(recipient, index)).join(", ") || "LOCAL"}`, tone: "output" }, { text: "", tone: "dim" }, ...payload.body.map((line) => ({ text: line, tone: "output" as Tone })), ...(payload.attachments.length ? [{ text: "", tone: "dim" as Tone }, { text: `ATTACHMENTS :: ${payload.attachments.join(" | ")}`, tone: "amber" as Tone }] : [])];
   return [{ text: `CREDENTIAL STORE :: ${payload.service}`, tone: "amber" }, { text: `LANGUAGE :: ${payload.language}`, tone: "dim" }, { text: `USERNAME : ${payload.username}`, tone: "output" }, { text: `SECRET   : ${payload.secret}`, tone: "amber" }, { text: `TARGET   : ${payload.target}`, tone: "output" }, { text: `HINT     : ${payload.hint}`, tone: "dim" }];
 }
@@ -224,7 +241,7 @@ function helpLines(): TerminalLine[] {
     { text: "PWD                  print working directory", tone: "output" },
     { text: "CAT / TYPE / OPEN     render a proprietary file", tone: "output" },
     { text: "LIBRARY [term]        list searchable .BOOK knowledge records", tone: "output" },
-    { text: "BOOK <path>            open a .BOOK knowledge record", tone: "output" },
+    { text: "BOOK <path> [page]     read a paginated .BOOK knowledge record", tone: "output" },
     { text: "MSG [INBOX|GHOST]      inspect official or unregistered messages", tone: "output" },
     { text: "TREE [path]           print a compact directory tree", tone: "output" },
     { text: "FIND / SEARCH <term>  search indexed paths and metadata", tone: "output" },
@@ -349,12 +366,17 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
       if (file.extension !== ".BOOK" || file.payload.kind !== "book") return false;
       return !query || [file.path, file.summary, file.language, file.payload.title, file.payload.author, file.payload.subject, file.payload.level, ...file.keywords].join(" ").toLowerCase().includes(query);
     }).slice(0, 48);
-    return result([{ text: `LIBRARY INDEX // ${books.length} RECORD(S)${query ? ` :: ${query}` : ""}`, tone: "system" }, ...books.map((file) => ({ text: `${file.name.padEnd(38)} ${file.language.padEnd(8)} ${file.payload.kind === "book" ? file.payload.level.padEnd(7) : ""} :: ${file.payload.kind === "book" ? file.payload.subject : file.summary}`, tone: file.clearance === "GUEST" ? "output" as Tone : "amber" as Tone }))]);
+    return result([{ text: `LIBRARY INDEX // ${books.length} RECORD(S)${query ? ` :: ${query}` : ""}`, tone: "system" }, ...books.map((file) => ({ text: `${file.name.padEnd(38)} ${file.language.padEnd(8)} ${file.payload.kind === "book" ? file.payload.level.padEnd(7) : ""} P${String(file.payload.kind === "book" ? (file.payload.pages?.length ?? 1) : 1).padStart(2, "0")} :: ${file.payload.kind === "book" ? file.payload.subject : file.summary}`, tone: file.clearance === "GUEST" ? "output" as Tone : "amber" as Tone }))]);
   }
   if (normalized === "book") {
-    const file = resolveFile(index, arg, cwd);
-    if (!file || file.extension !== ".BOOK" || file.payload.kind !== "book") return result([{ text: `book: knowledge record not found: ${arg || "<empty>"}`, tone: "error" }]);
-    return result(openLines(file, index, runtime), { focus: file.path });
+    const maybePage = args.at(-1);
+    const pageNumber = maybePage && /^\d+$/.test(maybePage) ? Number(maybePage) : 1;
+    const path = maybePage && /^\d+$/.test(maybePage) ? args.slice(0, -1).join(" ") : arg;
+    const file = resolveFile(index, path, cwd);
+    if (!file || file.extension !== ".BOOK" || file.payload.kind !== "book") return result([{ text: `book: knowledge record not found: ${path || "<empty>"}`, tone: "error" }]);
+    const accessCheck = openLines(file, index, runtime);
+    if (accessCheck.some((line) => line.text === "payload not mounted for this session" || line.text === "payload unavailable")) return result(accessCheck, { focus: file.path });
+    return result(renderBookPage(file.payload, pageNumber), { focus: file.path });
   }
   if (["msg", "messages", "inbox"].includes(normalized)) {
     const mode = (args[0] ?? "INBOX").toUpperCase();
