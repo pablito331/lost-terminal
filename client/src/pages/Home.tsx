@@ -13,20 +13,20 @@ import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleN
 import { configureLofiGraph } from "@/lib/audioPipeline";
 import { searchSeedFiles } from "@/lib/seedAudit";
 import { translateSeedFile } from "@/lib/seedTranslator";
-import { processCanUse, SeedProcess, spawnSeedProcess, stopSeedProcess } from "@/lib/seedProcess";
+import { crashSeedProcess, processCanUse, SeedProcess, spawnSeedProcess, stopSeedProcess, validateProcessSpec } from "@/lib/seedProcess";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
 type BootState = "RUNNING" | "HALTED" | "DIAGNOSTIC" | "SAFE_MODE" | "RECOVERY" | "BIOS";
 type FirmwareFlags = { maintenancePort: boolean; ghostBus: boolean; cryo601: boolean; rootWrite: boolean; hiddenVolume: boolean; debugConsole: boolean };
 type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "REMOTE" | "SOURCE_MISSING"; position: number; lofi: boolean };
-type InstalledApp = { sourcePath: string; installedPath: string; installedAt: string; owner?: string };
+type InstalledApp = { sourcePath: string; installedPath: string; installedAt: string; owner?: string; version?: string; previousVersion?: string };
 type SeedWorkspaceProgram = { path: string; code: string[]; compiled: boolean; compiledAt?: string };
 type TranslationState = { path: string; sourceLanguage: string; targetLanguage: string; fidelity: string; translatedAt: number };
-type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; workspacePrograms: SeedWorkspaceProgram[]; processes: SeedProcess[]; openFiles: string[]; translation?: TranslationState; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; lockedUntil: Record<string, number>; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
+type RuntimeState = { seedVersion: string; firmwareVersion: string; energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; appMigrations: { path: string; from: string; to: string; at: string; rollback: boolean }[]; workspacePrograms: SeedWorkspaceProgram[]; processes: SeedProcess[]; openFiles: string[]; translation?: TranslationState; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; lockedUntil: Record<string, number>; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
 type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
-export const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], processes: [], openFiles: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], lockedUntil: {}, recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
+export const initialRuntime: RuntimeState = { seedVersion: "0.9.1", firmwareVersion: "0.9.1", energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], appMigrations: [], workspacePrograms: [], processes: [], openFiles: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], lockedUntil: {}, recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: true }, systems: createInitialShipSystems() };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -166,12 +166,15 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
     runtime: {
       ...initialRuntime,
       ...runtime,
-      installedApps: Array.isArray(runtime.installedApps) ? runtime.installedApps.filter((app) => Boolean(app && typeof app.sourcePath === "string" && typeof app.installedPath === "string")) : [],
-      workspacePrograms,
+       installedApps: Array.isArray(runtime.installedApps) ? runtime.installedApps.filter((app) => Boolean(app && typeof app.sourcePath === "string" && typeof app.installedPath === "string")) : [],
+       appMigrations: Array.isArray(runtime.appMigrations) ? runtime.appMigrations.filter((entry) => Boolean(entry && typeof entry.path === "string" && typeof entry.from === "string" && typeof entry.to === "string" && typeof entry.at === "string")).slice(-64) : [],
+       workspacePrograms,
       processes: Array.isArray(runtime.processes) ? runtime.processes.filter((process): process is SeedProcess => Boolean(process && typeof process.pid === "number" && typeof process.path === "string" && Array.isArray(process.ports) && Array.isArray(process.openFiles) && Array.isArray(process.capabilities))).map((process) => ({ ...process, state: ["RUNNING", "PAUSED", "CRASHED", "EXITED"].includes(process.state) ? process.state : "CRASHED" })) : [],
       openFiles: Array.isArray(runtime.openFiles) ? runtime.openFiles.filter((path): path is string => typeof path === "string").slice(-32) : [],
       translation: runtime.translation && typeof runtime.translation.path === "string" ? { path: runtime.translation.path, sourceLanguage: String(runtime.translation.sourceLanguage ?? "UNKNOWN"), targetLanguage: String(runtime.translation.targetLanguage ?? "SEED-OPS"), fidelity: String(runtime.translation.fidelity ?? "PARTIAL"), translatedAt: typeof runtime.translation.translatedAt === "number" ? runtime.translation.translatedAt : 0 } : undefined,
       lockedUntil: runtime.lockedUntil && typeof runtime.lockedUntil === "object" ? Object.fromEntries(Object.entries(runtime.lockedUntil).filter(([key, value]) => typeof key === "string" && typeof value === "number")) : {},
+      seedVersion: typeof runtime.seedVersion === "string" ? runtime.seedVersion : initialRuntime.seedVersion,
+      firmwareVersion: typeof runtime.firmwareVersion === "string" ? runtime.firmwareVersion : initialRuntime.firmwareVersion,
       firmware: { ...initialRuntime.firmware, ...(runtime.firmware ?? {}) },
       nvram: { ...initialRuntime.nvram, ...(runtime.nvram ?? {}) },
       systems: {
@@ -202,7 +205,7 @@ function workspaceProgramFile(program: SeedWorkspaceProgram): SeedFile {
   return { path: program.path, name: program.path.slice(slash + 1), extension: ".PROC", kind: "program", directory: slash <= 0 ? "/" : program.path.slice(0, slash), size: `${Math.max(1, Math.round(program.code.join("\n").length / 12))} B`, updated: program.compiledAt ?? "WORKSPACE", layer: "SYSTEM", language: "SEED-OPS", summary: `${program.compiled ? "Compiled" : "Source"} Seed Script workspace program.`, clearance: "GUEST", payload: { kind: "program", language: "SEED-OPS", programType: "SCRIPT", code: program.code }, links: [{ target: "/apps/ide.PROC", label: "IDE", relation: "editor" }], keywords: ["seed script", "workspace", "source", program.path], system: true };
 }
 
-function createRuntimeIndex(index: SeedIndex, installedApps: InstalledApp[], workspacePrograms: SeedWorkspaceProgram[] = []): SeedIndex {
+export function createRuntimeIndex(index: SeedIndex, installedApps: InstalledApp[], workspacePrograms: SeedWorkspaceProgram[] = []): SeedIndex {
   const workspaceFiles = workspacePrograms.map(workspaceProgramFile);
   const sourceFiles = [...index.files, ...workspaceFiles];
   const sourceMap = new Map(sourceFiles.map((file) => [file.path.toLowerCase(), file]));
@@ -389,9 +392,32 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     if (source.integrity === "CORRUPTED" && !runtime.recoveredPaths.includes(source.path)) return result([{ text: `install: package unreadable :: ${source.path}`, tone: "error" }]);
     const installedPath = `/apps/${source.ownerId ? `${source.ownerId}-${source.name}` : source.name}`;
     if (index.fileMap.has(installedPath.toLowerCase())) return result([{ text: `install: target reserved :: ${installedPath}`, tone: "error" }]);
-    const installedApp: InstalledApp = { sourcePath: source.path, installedPath, installedAt: new Date().toISOString(), owner: runtime.authenticatedUsers.at(-1) };
+    const installedApp: InstalledApp = { sourcePath: source.path, installedPath, installedAt: new Date().toISOString(), owner: runtime.authenticatedUsers.at(-1), version: "0.9.1" };
     const nextRuntime = { ...runtime, installedApps: [...runtime.installedApps, installedApp] };
     return result([{ text: `INSTALL ${source.path}`, tone: "system" }, { text: `registry entry :: ${installedPath}`, tone: "output" }, { text: "application state :: REGISTERED / READY", tone: "amber" }], { nextRuntime, focus: installedPath });
+  }
+  if (["migrate", "upgrade-app"].includes(normalized)) {
+    const target = normalizePath(args[0] ?? "", cwd).toLowerCase();
+    const installed = runtime.installedApps.find((app) => app.installedPath.toLowerCase() === target || app.installedPath.toLowerCase() === `/apps/${(args[0] ?? "").trim().toLowerCase()}`);
+    const to = args[1] ?? "";
+    if (!installed) return result([{ text: `migrate: user application not registered :: ${args[0] || "<empty>"}`, tone: "error" }]);
+    if (!/^0\.\d+\.\d+$/.test(to)) return result([{ text: "migrate: target version required :: MIGRATE <app> <0.x.y>", tone: "error" }]);
+    const from = installed.version ?? "0.9.1";
+    if (from === to) return result([{ text: `migrate: already at ${to} :: ${installed.installedPath}`, tone: "dim" }]);
+    const at = new Date().toISOString();
+    const nextRuntime = { ...runtime, installedApps: runtime.installedApps.map((app) => app.installedPath === installed.installedPath ? { ...app, previousVersion: from, version: to } : app), appMigrations: [...runtime.appMigrations, { path: installed.installedPath, from, to, at, rollback: false }].slice(-64) };
+    return result([{ text: `MIGRATE ${installed.installedPath}`, tone: "system" }, { text: `version :: ${from} -> ${to}`, tone: "output" }, { text: "registry :: UPDATED / SNAPSHOT ELIGIBLE", tone: "amber" }], { nextRuntime });
+  }
+  if (["rollback", "revert-app"].includes(normalized)) {
+    const target = normalizePath(args[0] ?? "", cwd).toLowerCase();
+    const installed = runtime.installedApps.find((app) => app.installedPath.toLowerCase() === target || app.installedPath.toLowerCase() === `/apps/${(args[0] ?? "").trim().toLowerCase()}`);
+    if (!installed) return result([{ text: `rollback: user application not registered :: ${args[0] || "<empty>"}`, tone: "error" }]);
+    const from = installed.version ?? "0.9.1";
+    const to = installed.previousVersion;
+    if (!to) return result([{ text: `rollback: no prior version recorded :: ${installed.installedPath}`, tone: "error" }]);
+    const at = new Date().toISOString();
+    const nextRuntime = { ...runtime, installedApps: runtime.installedApps.map((app) => app.installedPath === installed.installedPath ? { ...app, version: to, previousVersion: from } : app), appMigrations: [...runtime.appMigrations, { path: installed.installedPath, from, to, at, rollback: true }].slice(-64) };
+    return result([{ text: `ROLLBACK ${installed.installedPath}`, tone: "system" }, { text: `version :: ${from} -> ${to}`, tone: "amber" }, { text: "registry :: RESTORED / SNAPSHOT ELIGIBLE", tone: "output" }], { nextRuntime });
   }
   if (["uninstall", "remove-app"].includes(normalized)) {
     const target = normalizePath(arg || "", cwd).toLowerCase();
@@ -573,6 +599,10 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     const hasAccount = Boolean(file.access && runtime.authenticatedUsers.includes(file.access.username));
     if (clearanceRank[runtime.authority] < clearanceRank[file.clearance] && !hasAccount) return result([{ text: `run: permission denied :: required ${file.clearance}`, tone: "error" }]);
     if (file.integrity === "CORRUPTED" && !runtime.recoveredPaths.includes(file.path)) return result([{ text: `run: binary unreadable :: ${file.path}`, tone: "error" }]);
+    const installedRecord = runtime.installedApps.find((app) => app.installedPath.toLowerCase() === file.path.toLowerCase());
+    const launchVersion = installedRecord?.version ?? "0.9.1";
+    const launchIssues = validateProcessSpec({ path: file.path, version: launchVersion, memory: file.payload.programType === "GAME" ? 12 : 8, compatibleFirmware: "0.9.1", requiredDependencies: file.payload.action?.requires ?? [] }, { firmware: runtime.firmwareVersion, seedVersion: runtime.seedVersion, installedDependencies: [...runtime.credentials, ...runtime.services] });
+    if (launchIssues.length) return result([{ text: `run: launch rejected :: ${launchIssues.join(" | ")}`, tone: "error" }, { text: "process not spawned :: dependency/firmware gate", tone: "dim" }]);
     const workspace = runtime.workspacePrograms.find((program) => program.path.toLowerCase() === file.path.toLowerCase());
     if (workspace && !workspace.compiled) return result([{ text: `run: source not compiled :: ${file.path}`, tone: "error" }, { text: "compile the workspace artifact before execution", tone: "dim" }]);
     if (workspace) {
@@ -593,9 +623,10 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
       };
       const execution = runSeedScript(workspace.code, { read: scriptRead, repair: scriptRepair });
       const effect = execution.effects as SeedScriptEffects;
-      const process = spawnSeedProcess(runtime.processes, { path: file.path, memory: 8, openFiles: [file.path], outputDevice: "/dev/stdout", capabilities: ["VFS_READ", ...(runtime.firmware.maintenancePort ? ["MAINTENANCE_WRITE"] : [])] }, runtime.systems.clock);
+      const spawned = spawnSeedProcess(runtime.processes, { path: file.path, memory: 8, openFiles: [file.path], outputDevice: "/dev/stdout", capabilities: ["VFS_READ", ...(runtime.firmware.maintenancePort ? ["MAINTENANCE_WRITE"] : [])] }, runtime.systems.clock);
+      const process = execution.errors.length ? crashSeedProcess(spawned, "SEED_SCRIPT_RUNTIME") : spawned;
       const nextRuntime = { ...runtime, processes: [...runtime.processes, process], energy: Math.max(0, Math.min(100, runtime.energy + (effect.energy ?? 0))), oxygen: Math.max(0, Math.min(100, runtime.oxygen + (effect.oxygen ?? 0))), hull: Math.max(0, Math.min(100, runtime.hull + (effect.hull ?? 0))), network: effect.network ?? runtime.network, systems: scriptSystems, services: effect.service ? Array.from(new Set([...runtime.services, effect.service])) : runtime.services };
-      return result([{ text: `SEED SCRIPT EXEC :: ${file.path}`, tone: "system" }, ...execution.output.map((text) => ({ text, tone: "output" as Tone })), ...execution.errors.map((error) => ({ text: error, tone: "error" as Tone }))], { nextRuntime, focus: file.path });
+      return result([{ text: `SEED SCRIPT EXEC :: ${file.path}`, tone: "system" }, ...(execution.errors.length ? [{ text: `PROC ${process.pid} :: CRASHED / resources released`, tone: "error" as Tone }] : []), ...execution.output.map((text) => ({ text, tone: "output" as Tone })), ...execution.errors.map((error) => ({ text: error, tone: "error" as Tone }))], { nextRuntime, focus: file.path });
     }
     if (file.path.toLowerCase() === "/apps/ide.proc") return result([{ text: "SEED IDE 1.0 // WORKBENCH ATTACHED", tone: "system" }, { text: "SOURCE :: /workspace/*.PROC", tone: "output" }, { text: "EDIT <path> [APPEND|CLEAR]", tone: "amber" }, { text: "COMPILE <path> :: syntax / bounds / policy", tone: "amber" }, { text: "RUN <path> :: mediated execution", tone: "amber" }, { text: "INSTALL <path> :: register derived artifact", tone: "dim" }], { focus: file.path });
     if (file.path.toLowerCase() === "/apps/msg.proc") return result([{ text: "SEED MSG 2.2 // OFFICIAL QUEUE ATTACHED", tone: "system" }, { text: "QUEUE :: /comms/seed", tone: "output" }, { text: "MSG INBOX :: list official delivery records", tone: "amber" }, { text: "MSG OPEN <path> :: inspect body and attachments", tone: "amber" }, { text: "GHOST QUEUE :: excluded from official client", tone: "dim" }], { focus: file.path });
@@ -604,10 +635,11 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     const missing = (action.requires ?? []).filter((requirement) => !runtime.credentials.includes(requirement) && !runtime.services.includes(requirement) && !(requirement === "BOTANY" && file.ownerId === "passenger-600"));
     if (missing.length) return result([{ text: `execution blocked :: dependency unavailable [${missing.join(", ")}]`, tone: "error" }]);
     const effects = action.effects ?? {};
-    const process = spawnSeedProcess(runtime.processes, { path: file.path, memory: file.payload.programType === "GAME" ? 12 : 6, openFiles: [file.path], outputDevice: "/dev/stdout", capabilities: ["VFS_READ", ...(file.payload.action ? ["STATE_MUTATE"] : [])] }, runtime.systems.clock);
+    const process = spawnSeedProcess(runtime.processes, { path: file.path, version: launchVersion, memory: file.payload.programType === "GAME" ? 12 : 6, openFiles: [file.path], outputDevice: "/dev/stdout", capabilities: ["VFS_READ", ...(file.payload.action ? ["STATE_MUTATE"] : [])] }, runtime.systems.clock);
     if (Object.keys(effects).length > 0 && !processCanUse(process, "STATE_MUTATE")) return result([{ text: `execution blocked :: capability STATE_MUTATE unavailable`, tone: "error" }]);
     const nextRuntime: RuntimeState = { ...runtime, processes: [...runtime.processes, process], openFiles: Array.from(new Set([...runtime.openFiles, file.path])).slice(-32), energy: Math.max(0, runtime.energy + (effects.energy ?? 0)), oxygen: Math.min(100, runtime.oxygen + (effects.oxygen ?? 0)), hull: Math.min(100, runtime.hull + (effects.hull ?? 0)), network: effects.network ?? runtime.network, authority: effects.authority ?? runtime.authority, services: Array.from(new Set([...runtime.services, ...(effects.service ? [effects.service] : [] )])) };
-    return result([{ text: `executing ${file.path}`, tone: "system" }, ...action.output.map((text) => ({ text, tone: "output" as Tone }))], { nextRuntime, focus: file.path });
+    const compatibilityOutput = launchVersion === "0.9.2" ? "compatibility patch 0.9.2 :: signed loop telemetry enabled" : "compatibility legacy 0.9.1 :: loop telemetry read-only";
+    return result([{ text: `executing ${file.path}`, tone: "system" }, { text: compatibilityOutput, tone: launchVersion === "0.9.2" ? "output" : "dim" }, ...action.output.map((text) => ({ text, tone: "output" as Tone }))], { nextRuntime, focus: file.path });
   }
   if (normalized === "echo") return result([{ text: arg, tone: "output" }]);
   return result([{ text: `${command}: command not found // try HELP`, tone: "error" }]);

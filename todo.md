@@ -72,9 +72,9 @@
 - [x] Fazer cada material técnico ensinar algo utilizável no Seed OS e relacionar conceitos a sensores, barramentos, firmware, biologia, navegação ou manutenção reais do VFS.
 - [x] Criar níveis de leitura e pré-requisitos naturais, permitindo que a biblioteca seja vasta e parcialmente redundante sem revelar qual documento é necessário.
 - [x] Revisar a continuidade editorial dos livros, mensagens e vídeos contra a cronologia, os personagens, as famílias, os departamentos e as falhas já estabelecidas.
-- [ ] Isolar processos, tratar crash, corrupção, dependências ausentes, versão incompatível e encerramento forçado.
+- [x] Isolar processos, tratar crash, corrupção, dependências ausentes, versão incompatível e encerramento forçado; `RUN` aplica gates reais de firmware/versão e registra crash.
 - [x] Permitir que aplicações alterem apenas os estados e dispositivos autorizados, respeitando BIOS, autoridade e permissões; ações exigem dependências/capacidades e reparos exigem canal de manutenção.
-- [ ] Criar compatibilidade de aplicações entre versões do Seed OS e registros de migração/rollback.
+- [x] Criar compatibilidade de aplicações entre versões do Seed OS e registros de migração/rollback; `MIGRATE`/`ROLLBACK` alteram versão do processo e comportamento observável do app.
 - [x] Persistir processos, arquivos abertos, áudio ativo, tradução e efeitos da aplicação dentro da sessão do terminal; `processes` entrou no snapshot compatível e `PS/KILL` liberam recursos.
 - [x] Testar o ecossistema com o shell como ponto único de entrada, sem dashboard paralelo ou player externo.
 - [x] Definir a extensão proprietária de música, preferencialmente `.MUS`, separando-a de `.REC` para voz e interceptações.
@@ -232,7 +232,7 @@
 - [x] Adicionar busca contextual por campos (type, person, terminal, department, time, keyword, contradiction) ao dispatcher FIND/SEARCH.
 - [x] Adicionar auditoria pura de schema documental, cobertura de campos e inventário pessoal, com testes Vitest.
 - [x] Implementar bloqueio temporário de contas por ciclos do Seed OS, expiração persistente em snapshots e aviso técnico no buffer SYSLOG.
-- [x] Validar TypeScript, suíte Vitest, auditorias Seed OS, matriz de comandos e build de produção após reinicialização do servidor; suíte atualizada para 18 testes.
+- [x] Validar TypeScript, suíte Vitest, auditorias Seed OS, matriz de comandos e build de produção após reinicialização do servidor; suíte atualizada para 30 testes.
 
 - [ ] Validar manualmente no navegador o fluxo de reprodução de playlist.MUS após AUTH I.CHEN e PLAY playlist.MUS; autoplay e disponibilidade do canal direto dependem da sessão do navegador.
 - [x] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade; `TRANSLATE` preserva o payload e herda clearance, conta e integridade.
@@ -249,3 +249,11 @@
 
 - [x] Enforçar capabilities de `.PROC` em toda mutação de estado/dispositivo, com gate explícito de BIOS, autoridade e alvo, e teste de aplicação não autorizada; o caminho de efeitos agora exige `STATE_MUTATE` no processo mediado.
 - [x] Persistir estado da camada de tradução e arquivos abertos no snapshot, restaurando ambos após reload/reboot com testes determinísticos; o runtime normaliza ambos e o envelope ganhou round-trip UTF-8.
+
+- [x] Integrar `validateProcessSpec` ao fluxo real de `RUN/EXEC/START`, bloqueando dependência ausente, firmware incompatível e corrupção detectada com saída diegética e teste de dispatcher.
+- [x] Integrar crash/corrupção ao runtime `.PROC`, registrando estado e log, liberando recursos e persistindo o impacto no shell/snapshot com teste end-to-end.
+- [x] Integrar migração/rollback de aplicações ao registry e ao snapshot do Seed OS, com versão compatível, registro de migração e rollback funcional verificável.
+
+- [x] Integrar e testar no dispatcher um caso real de lançamento `.PROC` bloqueado por firmware/versão incompatível, com estado/log persistidos no snapshot.
+- [x] Conectar versionamento de apps ao launch/runtime real: validar compatibilidade por versão ao executar/instalar, aplicar migração efetiva e oferecer rollback que restaure comportamento verificável.
+- [x] Adicionar testes end-to-end para incompatibilidade de versão/firmware e para `MIGRATE`/`ROLLBACK` afetando execução real do app após reload/snapshot, incluindo diferença de saída funcional.

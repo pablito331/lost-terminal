@@ -3,6 +3,7 @@ export type SeedProcessState = "RUNNING" | "PAUSED" | "CRASHED" | "EXITED";
 export type SeedProcess = {
   pid: number;
   path: string;
+  version?: string;
   state: SeedProcessState;
   memory: number;
   ports: number[];
@@ -17,17 +18,41 @@ export type SeedProcess = {
 export type ProcessSpec = {
   path: string;
   memory: number;
+  version?: string;
+  requiredDependencies?: string[];
+  compatibleFirmware?: string;
   ports?: number[];
   openFiles?: string[];
   outputDevice?: string;
   capabilities?: string[];
 };
 
+export type ProcessLaunchContext = {
+  firmware: string;
+  seedVersion?: string;
+  installedDependencies: string[];
+};
+
+export function validateProcessSpec(spec: ProcessSpec, context: ProcessLaunchContext): string[] {
+  const issues: string[] = [];
+  if (spec.compatibleFirmware && spec.compatibleFirmware !== context.firmware) issues.push("FIRMWARE_INCOMPATIBLE");
+  if (spec.version && context.seedVersion && spec.version !== context.seedVersion) issues.push(`SEED_VERSION_INCOMPATIBLE:${spec.version}`);
+  for (const dependency of spec.requiredDependencies ?? []) {
+    if (!context.installedDependencies.includes(dependency)) issues.push(`DEPENDENCY_MISSING:${dependency}`);
+  }
+  return issues;
+}
+
+export function migrateSeedProcess(process: SeedProcess, fromVersion: string, toVersion: string): SeedProcess {
+  if (fromVersion === toVersion) return process;
+  return { ...process, fault: `MIGRATED:${fromVersion}->${toVersion}` };
+}
+
 export function spawnSeedProcess(existing: SeedProcess[], spec: ProcessSpec, clock: number): SeedProcess {
   const used = new Set(existing.map((process) => process.pid));
   let pid = 100;
   while (used.has(pid)) pid += 1;
-  return { pid, path: spec.path, state: "RUNNING", memory: Math.max(1, Math.min(32, spec.memory)), ports: Array.from(new Set(spec.ports ?? [])).slice(0, 4), openFiles: Array.from(new Set(spec.openFiles ?? [])).slice(0, 16), outputDevice: spec.outputDevice ?? "/dev/stdout", capabilities: Array.from(new Set(spec.capabilities ?? [])), startedAt: clock };
+  return { pid, path: spec.path, version: spec.version, state: "RUNNING", memory: Math.max(1, Math.min(32, spec.memory)), ports: Array.from(new Set(spec.ports ?? [])).slice(0, 4), openFiles: Array.from(new Set(spec.openFiles ?? [])).slice(0, 16), outputDevice: spec.outputDevice ?? "/dev/stdout", capabilities: Array.from(new Set(spec.capabilities ?? [])), startedAt: clock };
 }
 
 export function stopSeedProcess(process: SeedProcess, exitCode = 0): SeedProcess {
