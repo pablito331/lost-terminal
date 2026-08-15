@@ -13,6 +13,18 @@ const videos = index.files.filter((file) => file.extension === ".VIS" && file.di
 const languages = new Set(knowledge.map((file) => file.language));
 const brokenContinuity = validateSeedContinuity(index);
 const paginatedBooks = knowledge.filter((file) => file.payload.kind === "book" && (file.payload.pages?.length ?? 0) >= 6);
+const editorialProfiles = knowledge.map((file) => {
+  if (file.payload.kind !== "book") return { path: file.path, language: file.language, chapters: 0, pages: 0, characters: 0 };
+  return {
+    path: file.path,
+    language: file.language,
+    chapters: file.payload.chapters.filter((entry) => entry.includes("//")).length,
+    pages: file.payload.pages?.length ?? 0,
+    characters: file.payload.chapters.filter((entry) => !entry.includes("//")).join(" ").length,
+  };
+});
+const hasEditorialMinimum = ({ language, chapters, pages, characters }: typeof editorialProfiles[number]) => chapters >= 9 && pages >= 12 && characters >= (language === "zh-CN" || language === "ja-JP" ? 3500 : 6000);
+const completeBooks = editorialProfiles.filter(hasEditorialMinimum);
 const ivoJournal = index.files.filter((file) => file.path.startsWith("/personal/passenger-014/journal/day-") && file.extension === ".SCR");
 
 const repairExample = [
@@ -37,6 +49,7 @@ const failures = [
   bootstrapCredential?.payload.kind !== "credential" || bootstrapCredential.payload.username !== "I.CHEN" || bootstrapCredential.payload.secret !== "TIDAL-04" ? "BOOTSTRAP_AUTH=INVALID" : "",
   knowledge.length < 10 ? `BOOK_COUNT=${knowledge.length}` : "",
   paginatedBooks.length !== knowledge.length ? `PAGINATED_BOOKS=${paginatedBooks.length}/${knowledge.length}` : "",
+  completeBooks.length !== knowledge.length ? `EDITORIAL_MINIMUMS=${completeBooks.length}/${knowledge.length} :: ${editorialProfiles.filter((profile) => !hasEditorialMinimum(profile)).map(({ path, chapters, pages, characters }) => `${path}[chapters=${chapters},pages=${pages},characters=${characters}]`).join(" | ")}` : "",
   ivoJournal.length < 12 ? `IVO_JOURNAL_ENTRIES=${ivoJournal.length}` : "",
   messages.length < 5 ? `MSG_COUNT=${messages.length}` : "",
   videos.length < 2 ? `PUBLIC_VIS_COUNT=${videos.length}` : "",
@@ -49,6 +62,7 @@ const failures = [
 
 console.log(`BOOKS=${knowledge.length}`);
 console.log(`PAGINATED_BOOKS=${paginatedBooks.length}`);
+console.log(`BOOK_EDITORIAL_MINIMUMS=${completeBooks.length}/${knowledge.length}`);
 console.log(`IVO_JOURNAL_ENTRIES=${ivoJournal.length}`);
 console.log(`BOOTSTRAP_CREDENTIAL=${bootstrapCredential?.path ?? "MISSING"}`);
 console.log(`BOOTSTRAP_CLEARANCE=${bootstrapCredential?.clearance ?? "MISSING"}`);

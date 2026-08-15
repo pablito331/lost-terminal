@@ -4,6 +4,7 @@
  * cross-linked to the existing crew, systems and incidents.
  */
 import type { CrewMember, FileLanguage, SeedFile, SeedLink } from "./seedData";
+import { completeRecoveredBook } from "./seedBookEditorial";
 
 type BookSpec = {
   path: string;
@@ -68,21 +69,22 @@ function file(input: Omit<SeedFile, "directory" | "name"> & { path: string; dire
 }
 
 function book(spec: BookSpec): SeedFile {
-  const references = spec.references ?? [];
-  const pages = makeBookPages(spec, references);
+  const completeSpec = completeRecoveredBook(spec);
+  const references = completeSpec.references ?? [];
+  const pages = makeBookPages(completeSpec, references);
   return file({
-    path: spec.path,
+    path: completeSpec.path,
     extension: ".BOOK",
     kind: "book",
     size: `${Math.max(4, Math.round(pages.flatMap((page) => page.lines).join(" ").length / 15))} KB`,
     updated: "T-18:00:00",
     layer: "SYSTEM",
-    language: spec.language,
-    summary: `${spec.title} // ${spec.subject} // ${spec.language}`,
-    clearance: spec.clearance ?? (spec.level === "INTRO" ? "GUEST" : spec.level),
-    payload: { kind: "book", language: spec.language, title: spec.title, author: spec.author, subject: spec.subject, level: spec.level, chapters: spec.chapters, pages, references },
+    language: completeSpec.language,
+    summary: `${completeSpec.title} // ${completeSpec.subject} // ${completeSpec.language}`,
+    clearance: completeSpec.clearance ?? (completeSpec.level === "INTRO" ? "GUEST" : completeSpec.level),
+    payload: { kind: "book", language: completeSpec.language, title: completeSpec.title, author: completeSpec.author, subject: completeSpec.subject, level: completeSpec.level, chapters: completeSpec.chapters, pages, references },
     links: references.map((target, index) => ({ target, label: `REF_${String(index + 1).padStart(2, "0")}`, relation: "referência técnica" })),
-    keywords: [...spec.keywords, spec.title, spec.author, spec.subject, spec.language, "book", "library"],
+    keywords: [...completeSpec.keywords, completeSpec.title, completeSpec.author, completeSpec.subject, completeSpec.language, "book", "library"],
     system: true,
   });
 }

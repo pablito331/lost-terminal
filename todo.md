@@ -14,7 +14,10 @@
 - [ ] Auditar cada credencial contextual para que sua fonte tenha clearance igual ou inferior ao nível exigido para descobri-la, evitando bloqueios circulares de progressão.
 - [ ] Criar validação automatizada que simule o primeiro acesso GUEST e rejeite credenciais cuja única fonte esteja protegida por CREW, OFFICER ou ROOT.
 - [ ] Expandir diários centrais em séries datadas de múltiplas entradas, com evolução emocional, técnica e relacional entre dias, sem contradizer a cronologia do VFS.
-- [ ] Transformar os livros `.BOOK` em obras extensas com páginas ou capítulos completos, índice, numeração, referências internas, apêndices e exemplos utilizáveis.
+- [x] Transformar os livros `.BOOK` em obras extensas com páginas ou capítulos completos, índice, numeração, referências internas, apêndices e exemplos utilizáveis.
+- [x] Reescrever os quinze volumes `.BOOK` como obras completas, sem páginas de preenchimento: cada um deverá ter tese ou propósito definido, desenvolvimento contínuo, exemplos ou estudos de caso, limites, glossário e encerramento coerente.
+- [x] Estabelecer mínimos editoriais por categoria: procedimentos reproduzíveis nos manuais; exercícios e código executável nos livros de Seed Script; hipóteses, método e consequências nos volumes científicos; cronologia, fontes e vieses nas obras históricas.
+- [x] Auditar página a página para remover resumos, repetições e texto genérico, preservando a voz, o idioma e as referências internas de cada autor fictício.
 - [ ] Implementar leitura paginada no terminal (`BOOK <arquivo> <página>`) e preservar a posição de leitura por sessão sem criar uma superfície gráfica paralela.
 - [ ] Tornar `/library` e o comando `LIBRARY` descobríveis por navegação, `TREE`, `FIND`, `SEARCH` e documentação de sistema, mantendo o acervo vasto sem destacar documentos obrigatórios.
 - [ ] Auditar o volume mínimo, a continuidade e a qualidade linguística dos diários e livros antes de adicionar novas cadeias narrativas.
