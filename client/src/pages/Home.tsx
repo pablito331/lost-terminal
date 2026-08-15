@@ -14,6 +14,7 @@ import { configureLofiGraph } from "@/lib/audioPipeline";
 import { searchSeedFiles } from "@/lib/seedAudit";
 import { translateSeedFile } from "@/lib/seedTranslator";
 import { crashSeedProcess, processCanUse, SeedProcess, spawnSeedProcess, stopSeedProcess, validateProcessSpec } from "@/lib/seedProcess";
+import { attemptSeedExploit, ExploitMode } from "@/lib/seedExploit";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
@@ -183,6 +184,8 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
         generators: runtime.systems?.generators ?? initialRuntime.systems.generators,
         buses: runtime.systems?.buses ?? initialRuntime.systems.buses,
         lifeSupport: { ...initialRuntime.systems.lifeSupport, ...(runtime.systems?.lifeSupport ?? {}) },
+        doors: { ...initialRuntime.systems.doors, ...(runtime.systems?.doors ?? {}) },
+        cryo: { ...initialRuntime.systems.cryo, ...(runtime.systems?.cryo ?? {}) },
       },
       audio: {
         ...initialRuntime.audio,
@@ -477,6 +480,15 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     if (!runtime.audio.path) return result([{ text: `audio: no active process :: ${normalized}`, tone: "error" }]);
     const status: AudioState["status"] = normalized === "pause" ? "PAUSED" : normalized === "stop" ? "STOPPED" : runtime.audio.source ? "PLAYING" : runtime.audio.status === "REMOTE" ? "REMOTE" : "SOURCE_MISSING";
     return result([{ text: `AUDIO ${normalized.toUpperCase()} :: ${runtime.audio.path}`, tone: normalized === "stop" ? "dim" : "amber" }], { nextRuntime: { ...runtime, audio: { ...runtime.audio, status, ...(normalized === "stop" ? { position: 0 } : {}) } } });
+  }
+  if (["exploit", "x"].includes(normalized)) {
+    const mode = (args[0] ?? "").toUpperCase() as ExploitMode;
+    const selectedMode: ExploitMode = mode === "TEMP" || mode === "UNSIGNED" ? mode : "CACHE";
+    const target = args.slice(1).join(" ") || "/apps/backdoor_exploit.PROC";
+    const exploit = attemptSeedExploit(runtime, selectedMode, target);
+    if (!exploit.ok) return result([{ text: exploit.reason, tone: "error" }]);
+    const nextRuntime: RuntimeState = { ...runtime, ...exploit.patch, firmware: runtime.firmware };
+    return result([{ text: `INTERNAL OP :: ${selectedMode}`, tone: "system" }, { text: exploit.message, tone: "amber" }, { text: "authority :: ROOT / session mutation persisted", tone: "output" }], { nextRuntime });
   }
   if (normalized === "sudo") return result([{ text: "sudo: clearance required :: request denied", tone: "error" }]);
   if (["ls", "dir"].includes(normalized)) {

@@ -35,6 +35,8 @@ export interface ShipSystemsState {
   generators: GeneratorUnit[];
   buses: PowerBus[];
   lifeSupport: LifeSupportState;
+  doors: Record<string, "OPEN" | "CLOSED" | "SEALED" | "FAULT">;
+  cryo: Record<string, "STABLE" | "SUSPENDED" | "UNKNOWN" | "FAULT">;
   notices: string[];
   lastNoticeAt: number;
 }
@@ -66,6 +68,8 @@ export function createInitialShipSystems(): ShipSystemsState {
       { id: "LIFE", state: "DEGRADED", load: 18, capacity: 20 },
     ],
     lifeSupport: { scrubberA: "ONLINE", scrubberB: "FAULT", cycle: "DEGRADED", forecast: 14 },
+    doors: { "CRYO-601": "SEALED", "MAINTENANCE-PORT": "CLOSED", "BRIDGE": "SEALED" },
+    cryo: { "001-600": "STABLE", "601": "UNKNOWN" },
     notices: ["LIFE.O2.DRIFT", "PWR.GEN.02.FAULT", "MEM.SECTOR.03.BAD"],
     lastNoticeAt: 0,
   };

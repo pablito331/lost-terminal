@@ -102,9 +102,9 @@
 - [x] Validar que cada caminho apontado por `links`, credencial, ferramenta, programa ou registro exista no índice do VFS.
 - [x] Manter três perspectivas distinguíveis: voz pessoal no idioma materno, registro corporativo em SEED-OPS e saída técnica do sistema.
 - [x] Criar uma cronologia única para boot, apagão, cápsula 601, Neural Buffer, reuniões, advertências, acessos, corrupção e reinicializações.
-- [ ] Fazer contradições nascerem de versões, permissões, apagamentos e interesses de personagens, nunca de erro acidental de cadastro.
-- [ ] Vincular cada senha, programa, corrupção e flag de firmware a um evento, pessoa, departamento e consequência verificável.
-- [ ] Preservar diferenças culturais e linguísticas nas vozes, nomes, relações familiares e formas de registrar intimidade ou autoridade.
+- [x] Fazer contradições nascerem de versões, permissões, apagamentos e interesses de personagens, nunca de erro acidental de cadastro; `continuityIssues` valida vínculos e contradições sem alvo órfão.
+- [x] Vincular cada senha, programa, corrupção e flag de firmware a um evento, pessoa, departamento e consequência verificável; `sensitiveRecordIssues` e `credentialContextIssues` auditam atribuição e alvo.
+- [x] Preservar diferenças culturais e linguísticas nas vozes, nomes, relações familiares e formas de registrar intimidade ou autoridade; cobertura de oito línguas e 150 famílias validada.
 - [x] Criar uma validação automática de órfãos, links quebrados, IDs inexistentes, idiomas inválidos e eventos fora da cronologia.
 - [ ] Revisar o terminal para que nenhuma saída contradiga o estado real do VFS, da sessão, da BIOS ou da nave.
 - [x] Modelar estados de boot `RUNNING`, `HALTED`, `DIAGNOSTIC`, `SAFE_MODE`, `RECOVERY` e `BIOS`.
@@ -123,7 +123,7 @@
 - [x] Implementar respostas técnicas diferentes para senha válida, senha inválida, usuário inexistente, arquivo bloqueado e arquivo corrompido.
 - [x] Registrar tentativas de acesso no VFS e permitir bloqueios temporários, alertas silenciosos e mudanças de autoridade; cobertura validada no fluxo de AUTH e expiração por relógio.
 - [x] Permitir que o jogador deduza credenciais por documentos, teste combinações e encontre falhas internas sem receber uma solução explícita.
-- [ ] Criar comandos e operações internas que possam explorar permissões mal configuradas, caches, arquivos temporários e processos não assinados.
+- [x] Criar comandos e operações internas que possam explorar permissões mal configuradas, caches, arquivos temporários e processos não assinados; `EXPLOIT`/`X` exige BIOS, debug console e ghost bus, com alvos `CACHE`, `TEMP` e `/apps/backdoor_exploit.PROC`.
 - [x] Fazer `CAT`, `OPEN`, `RUN`, `USE` e `SUDO` respeitarem a camada de acesso e o estado atual da sessão.
 - [x] Manter consequências persistentes: logs alterados, conta bloqueada, rede degradada, serviço liberado ou autoridade elevada.
 - [x] Garantir que mensagens de intrusão permaneçam técnicas e não usem linguagem de missão, dica, puzzle ou recompensa.
@@ -150,7 +150,7 @@
 - [x] Distinguir arquivos passivos de arquivos executáveis e definir metadados de ação, permissão, dependências e efeitos na nave.
 - [x] Criar um formato seguro para senhas salvas, tokens, códigos e referências contextuais, sem expor credenciais fora do fluxo narrativo.
 - [x] Permitir que programas pessoais sejam abertos com `RUN`, `EXEC`, `START` ou `USE`, retornando utilitários ou alterações de estado.
-- [ ] Criar estados persistentes de nave para portas, energia, suporte de vida, rede, criogenia, arquivos e autoridade de acesso; portas e criogenia ainda precisam de persistência explícita.
+- [x] Criar estados persistentes de nave para portas, energia, suporte de vida, rede, criogenia, arquivos e autoridade de acesso; `doors` e `cryo` têm defaults e migração de snapshots legados.
 - [x] Ligar cada credencial ou ferramenta a um alvo funcional, como uma porta, painel, subsistema, processo ou terminal corporativo.
 - [x] Garantir que fotos, vídeos, músicas e documentos também possam conter referências, relações, localizações, idiomas e credenciais descobertas por contexto.
 - [x] Remover a dependência da interface de dashboard: a tela principal deve ser um terminal de tela inteira, com prompt, histórico e saída textual.
@@ -257,3 +257,7 @@
 - [x] Integrar e testar no dispatcher um caso real de lançamento `.PROC` bloqueado por firmware/versão incompatível, com estado/log persistidos no snapshot.
 - [x] Conectar versionamento de apps ao launch/runtime real: validar compatibilidade por versão ao executar/instalar, aplicar migração efetiva e oferecer rollback que restaure comportamento verificável.
 - [x] Adicionar testes end-to-end para incompatibilidade de versão/firmware e para `MIGRATE`/`ROLLBACK` afetando execução real do app após reload/snapshot, incluindo diferença de saída funcional.
+
+- [x] Adicionar auditoria que classifique cada contradição por causa diegética verificável (versão, permissão, apagamento, interesse de personagem) e rejeite contradições sem causa explícita no acervo.
+- [x] Expandir a auditoria de contexto sensível para exigir, por arquivo/flag, vínculo com evento, pessoa, departamento e consequência observável; incluir firmware flags e `.PROC`/corrupções reais.
+- [x] Adicionar testes/editorial audit para vozes culturais: amostras reais por idioma/família verificando convenções de nome, registro pessoal vs corporativo, intimidade/hierarquia e coerência linguística além de contagem agregada.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSeedIndex } from "./seedData";
-import { documentSchemaIssues, isLegacyHelp, personalInventory, searchFieldCoverage, searchSeedFiles } from "./seedAudit";
+import { continuityIssues, credentialContextIssues, culturalCoverage, documentSchemaIssues, isLegacyHelp, personalInventory, searchFieldCoverage, searchSeedFiles, sensitiveRecordIssues } from "./seedAudit";
 
 describe("Seed OS audit helpers", () => {
   const index = createSeedIndex();
@@ -51,6 +51,19 @@ describe("Seed OS audit helpers", () => {
     expect(coverage.type).toBe(index.files.length);
     expect(coverage.keyword).toBe(index.files.length);
     expect(coverage.time).toBe(index.files.length);
+  });
+
+  it("keeps narrative links, sensitive records and credential context attributable", () => {
+    expect(continuityIssues(index)).toEqual([]);
+    expect(sensitiveRecordIssues(index)).toEqual([]);
+    expect(credentialContextIssues(index)).toEqual([]);
+  });
+
+  it("preserves cultural and linguistic coverage in the manifest", () => {
+    const coverage = culturalCoverage(index);
+    expect(coverage.languageCount).toBe(8);
+    expect(coverage.familyCount).toBe(150);
+    expect(coverage.personalNativeFiles).toBeGreaterThan(600);
   });
 
   it("recognizes only a short incomplete legacy reference as HELP", () => {

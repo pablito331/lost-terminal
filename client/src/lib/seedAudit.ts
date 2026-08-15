@@ -96,3 +96,54 @@ export function isLegacyHelp(lines: Array<{ text: string }>): boolean {
   const text = lines.map((line) => line.text).join(" ").toLowerCase();
   return lines.length <= 12 && text.includes("commands // hybrid shell") && text.includes("legacy index") && text.includes("syntax registry :: incomplete") && text.includes("legacy aliases") && !text.includes("tutorial") && !text.includes("mission") && !text.includes("objective");
 }
+
+const contradictionCauses = /(version|vers[aã]o|permission|permiss[aã]o|access|acesso|delet|apag|interest|interesse|override|exception|exce[cç][aã]o|refused|recus|warning|advert)/i;
+const consequenceSignals = /(event|evento|access|acesso|repair|repar|recover|recuper|corrupt|corrup|firmware|service|servi[cç]o|override|autoriza|blocked|bloque)/i;
+
+export function continuityIssues(index: SeedIndex): string[] {
+  const paths = new Set(index.files.map((file) => file.path.toLowerCase()));
+  return index.files.flatMap((file) => {
+    const text = [file.contradiction, file.summary, ...file.keywords, ...(file.payload.kind === "text" ? file.payload.lines : [])].filter(Boolean).join(" ");
+    return [
+      ...file.links.filter((link) => !paths.has(link.target.toLowerCase())).map((link) => `${file.path}:missing-link:${link.target}`),
+      ...(file.contradiction && (!contradictionCauses.test(file.contradiction) || file.links.length < 1) ? [`${file.path}:contradiction-cause-unverifiable`] : []),
+      ...(file.contradiction && !consequenceSignals.test(text) ? [`${file.path}:contradiction-consequence-unverifiable`] : []),
+    ];
+  });
+}
+
+export function sensitiveRecordIssues(index: SeedIndex): string[] {
+  const crewById = new Map(index.crew.map((member) => [member.id, member]));
+  return index.files.filter((file) => {
+    const sensitive = file.extension === ".PROC" || file.extension === ".HLT" || file.extension === ".ATA" || file.kind === "credential" || Boolean(file.corruption?.length) || file.keywords.some((keyword) => /firmware|flag/i.test(keyword));
+    if (!sensitive || file.layer === "SYSTEM" || file.path.startsWith("/logs/system/")) return false;
+    const pathPerson = file.path.match(/passenger-\d+/)?.[0];
+    const person = file.ownerId || file.authorId || file.recipientIds?.[0] || pathPerson;
+    const member = person ? crewById.get(person) : undefined;
+    const hasPerson = Boolean(person && member);
+    const hasDepartment = Boolean(file.department || member?.department);
+    const hasEvent = Boolean(file.eventTime || file.updated);
+    const payloadText = [file.summary, ...file.keywords, ...(file.payload.kind === "program" ? file.payload.code : []), ...(file.payload.kind === "health" ? file.payload.vitals.map((vital) => `${vital.label} ${vital.status}`) : [])].join(" ");
+    const hasConsequence = file.links.length > 0 || Boolean(file.corruption?.length) || Boolean(file.payload.kind === "program" && file.payload.action?.effects) || Boolean(file.payload.kind === "health" && file.payload.vitals.some((vital) => vital.status !== "stable")) || consequenceSignals.test(payloadText);
+    return !(hasPerson && hasDepartment && hasEvent && hasConsequence);
+  }).map((file) => `${file.path}:event-person-department-consequence-incomplete`);
+}
+
+export function culturalCoverage(index: SeedIndex) {
+  const languages = new Set(index.crew.map((member) => member.language));
+  const families = index.families.filter((family) => family.members.length > 0 && languages.has(family.language));
+  const languageVoices = Array.from(languages).filter((language) => index.files.some((file) => file.layer === "PERSONAL" && file.language === language && file.kind === "text" && file.payload.kind === "text" && file.payload.lines.some((line) => line.trim().length > 20)));
+  const familyVoices = families.filter((family) => index.files.some((file) => file.familyId === family.id && file.layer === "PERSONAL" && file.language === family.language && file.payload.kind === "text" && file.payload.lines.some((line) => line.length > 20))).length;
+  const personalNative = index.files.filter((file) => file.layer === "PERSONAL" && file.language !== "SEED-OPS").length;
+  return { languageCount: languages.size, familyCount: families.length, personalNativeFiles: personalNative, languageVoices, familyVoices };
+}
+
+export function credentialContextIssues(index: SeedIndex): string[] {
+  const crewIds = new Set(index.crew.map((member) => member.id));
+  return index.files.filter((file) => {
+    if (file.kind !== "credential" || file.payload.kind !== "credential") return false;
+    const pathOwner = file.path.match(/passenger-\d+/)?.[0];
+    const owner = file.ownerId || pathOwner;
+    return !owner || !crewIds.has(owner) || !file.payload.target || file.links.length === 0;
+  }).map((file) => `${file.path}:credential-context-incomplete`);
+}
