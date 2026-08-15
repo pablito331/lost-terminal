@@ -32,6 +32,20 @@ describe("Seed OS audit helpers", () => {
     expect(inventory.hasCredential).toBe(true);
   });
 
+  it("models utilities, applications and offline games as real PROC payloads", () => {
+    const programs = index.files.filter((file) => file.extension === ".PROC" && file.payload.kind === "program");
+    expect(programs.some((file) => file.payload.kind === "program" && file.payload.programType === "UTILITY")).toBe(true);
+    expect(programs.some((file) => file.payload.kind === "program" && file.payload.programType === "APPLICATION")).toBe(true);
+    expect(programs.some((file) => file.payload.kind === "program" && file.payload.programType === "GAME")).toBe(true);
+    expect(programs.some((file) => file.path.includes("passenger-344") && file.payload.kind === "program" && file.payload.code.some((line) => line.includes("LOAD BOARD")))).toBe(true);
+    const damaged = programs.find((file) => file.path.includes("passenger-512"));
+    expect(damaged?.corruption).toEqual(["CHECKSUM_MISMATCH", "BLOCK_09_UNREADABLE"]);
+    const library = index.files.find((file) => file.path === "/personal/passenger-512/seed-snippets.SCR");
+    expect(library?.payload.kind).toBe("text");
+    expect(library?.payload.kind === "text" && library.payload.lines.some((line) => line.includes("PATCH BLOCK_09 USING verify_checksum"))).toBe(true);
+    expect(damaged?.links.some((link) => link.target === "/personal/passenger-512/seed-snippets.SCR")).toBe(true);
+  });
+
   it("keeps all indexed fields available for deterministic search", () => {
     const coverage = searchFieldCoverage(index);
     expect(coverage.type).toBe(index.files.length);

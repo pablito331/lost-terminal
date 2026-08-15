@@ -77,3 +77,13 @@ button { cursor: pointer; }
 .audio-instrument:has(.state-remote) .instrument-glyph { color: #efb457; }
 .audio-instrument:has(.state-remote) strong { color: #e8d0a0; }
 @media (max-width: 720px) { .remote-audio-frame { width: calc(100% - 16px); height: 74px; margin: 0 8px 8px; } .remote-audio-note { display: none; } }
+
+.payload-lens { margin: 0 13px 10px; padding: 9px 0 2px; border-top: 1px solid #203020; color: #8fa78a; font-size: 8px; line-height: 1.55; }
+.payload-lens .lens-links-title { padding: 0 0 7px; border-top: 0; }
+.payload-lens strong, .payload-lens span, .payload-lens p { display: block; margin: 0 0 5px; }
+.payload-lens strong { color: #c9ddc1; font-size: 9px; font-weight: 500; }
+.payload-lens p { color: #a2b59c; }
+.payload-telemetry { display: grid; gap: 3px; margin-top: 7px; }
+.payload-telemetry code { overflow: hidden; padding: 3px 5px; border-left: 2px solid #426c3f; color: #7ca879; background: rgba(140,255,104,.035); text-overflow: ellipsis; white-space: nowrap; }
+.payload-lens-voice { color: #b29a70; }
+.payload-lens-voice .lens-links-title { color: #efb457; }

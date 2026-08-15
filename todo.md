@@ -55,7 +55,7 @@
 - [x] Definir APIs internas para VFS, áudio, tradução, input, relógio, telemetria, permissões e estado da nave.
 - [x] Implementar um player nativo que abra arquivos `.MUS` dentro do Seed OS e mantenha reprodução em segundo plano.
 - [ ] Implementar um tradutor nativo capaz de ler arquivos pessoais em idiomas maternos e produzir uma camada temporária de interpretação; o protótipo cobre oito idiomas e vários payloads, mas ainda precisa de interpretação substantiva de conteúdo real.
-- [ ] Modelar jogos e utilitários como aplicações reais do sistema, sem revelar objetivos ou linguagem externa de jogo.
+- [x] Modelar jogos e utilitários como aplicações reais do sistema, sem revelar objetivos ou linguagem externa de jogo; `UTILITY`, `APPLICATION` e `GAME` agora são payloads `.PROC` reais.
 - [x] Criar uma biblioteca diegética em `/library` com livros técnicos, científicos, históricos e operacionais em múltiplos idiomas.
 - [x] Indexar livros por idioma, assunto, autor, departamento, nível, revisão, acesso e referências cruzadas sem transformar a biblioteca em um menu de objetivos.
 - [x] Criar o formato de documento `.BOOK` e comandos de consulta que permitam navegar, abrir, pesquisar e relacionar capítulos ao VFS.
@@ -63,7 +63,7 @@
 - [x] Implementar uma IDE diegética em `.PROC` para criar, editar, salvar, compilar, testar, depurar e instalar programas Seed Script.
 - [x] Fazer o compilador retornar erros técnicos úteis, limites de segurança, dependências ausentes, permissões e incompatibilidades de firmware.
 - [x] Ligar programas criados pelo jogador a caminhos funcionais de acesso, reparo, substituição ou diagnóstico dos sistemas da nave.
-- [ ] Criar exemplos quase funcionais de tripulantes, bibliotecas de código e módulos corrompidos que possam ser completados sem entregar soluções narrativas.
+- [x] Criar exemplos quase funcionais de tripulantes, bibliotecas de código e módulos corrompidos que possam ser completados sem entregar soluções narrativas; `memory-grid.PROC` e o módulo corrompido de passenger-512 cobrem esses estados.
 - [x] Implementar o app oficial de mensagens e um canal não registrado, com `.MSG`, filas, destinatários, timestamps, anexos, apagamentos e permissões.
 - [x] Adicionar vídeos públicos de missão, notícias, mensagens não abertas e registros de comunicação, mantendo vínculos entre pessoas, famílias, departamentos e incidentes.
 - [x] Substituir resumos genéricos por livros com capítulos substantivos, exemplos, procedimentos, limitações, exercícios diegéticos e referências cruzadas verificáveis.
@@ -237,8 +237,12 @@
 - [ ] Validar manualmente no navegador o fluxo de reprodução de playlist.MUS após AUTH I.CHEN e PLAY playlist.MUS; autoplay e disponibilidade do canal direto dependem da sessão do navegador.
 - [ ] Implementar tradutor nativo Seed OS para arquivos multilíngues, preservando texto original e autoridade; `TRANSLATE` aplica hoje uma camada parcial sem contornar clearance, conta ou integridade.
 - [ ] Formalizar isolamento completo de processos .PROC com PID, memória, portas e encerramento seguro.
-- [ ] Adicionar lentes visuais dedicadas para payloads .VIS e .REC no Connection Lens.
+- [x] Adicionar lentes visuais dedicadas para payloads .VIS e .REC no Connection Lens, com frame trace, telemetria, buffer de transcrição e codec diegético.
 
 - [x] Adicionar testes objetivos para AUTH cobrindo tentativas falhas, bloqueio temporário, expiração por relógio, aviso silencioso e mudança de autoridade após credenciais válidas.
 - [x] Reduzir HELP a uma referência técnica incompleta/legada ou ajustar sua política com teste forte de diegese, sem catalogar o sistema como tutorial.
 - [x] Adicionar testes determinísticos de FIND/SEARCH para `family=`, `language=`, `nationality=`, `path=` e combinações de filtros.
+
+- [x] Adicionar bibliotecas de código diegéticas reais no VFS, com snippets de tripulantes ligados a `.PROC` existentes e referências cruzadas.
+- [x] Tornar exemplos quase funcionais completáveis de fato, com lacunas técnicas, dependências, referências e comportamento verificável após reparo/execução.
+- [x] Auditar exemplos completáveis, comprovando biblioteca de código, programa de tripulante e módulo corrompido reparável em testes determinísticos.
