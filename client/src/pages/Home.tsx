@@ -9,18 +9,19 @@ import { createSeedIndex, FilePayload, SeedFile, SeedIndex, listDirectory, norma
 import { loadSeedSession, saveSeedSession } from "@/lib/seedPersistence";
 import { createInitialShipSystems, repairGenerator, repairLifeSupport, ShipSystemsState, tickShipSystems } from "@/lib/shipSystems";
 import { compileSeedScript, runSeedScript, SeedScriptEffects } from "@/lib/seedScript";
+import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleNanoPanel, visibleNanoPanels, NanoPanel } from "@/lib/nanoPanels";
 
 type Tone = "system" | "output" | "error" | "amber" | "prompt" | "dim";
 type TerminalLine = { text: string; tone?: Tone };
 type BootState = "RUNNING" | "HALTED" | "DIAGNOSTIC" | "SAFE_MODE" | "RECOVERY" | "BIOS";
 type FirmwareFlags = { maintenancePort: boolean; ghostBus: boolean; cryo601: boolean; rootWrite: boolean; hiddenVolume: boolean; debugConsole: boolean };
-type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "SOURCE_MISSING"; position: number };
+type AudioState = { path?: string; source?: string; title?: string; artist?: string; duration?: string; status: "STOPPED" | "PLAYING" | "PAUSED" | "REMOTE" | "SOURCE_MISSING"; position: number; lofi: boolean };
 type InstalledApp = { sourcePath: string; installedPath: string; installedAt: string; owner?: string };
 type SeedWorkspaceProgram = { path: string; code: string[]; compiled: boolean; compiledAt?: string };
 type RuntimeState = { energy: number; oxygen: number; hull: number; memory: number; network: "FRAGMENTED" | "STABLE"; authority: "GUEST" | "CREW" | "OFFICER" | "ROOT"; credentials: string[]; services: string[]; installedApps: InstalledApp[]; workspacePrograms: SeedWorkspaceProgram[]; authenticatedUsers: string[]; failedLogins: Record<string, number>; lockedUsers: string[]; recoveredPaths: string[]; boot: BootState; firmware: FirmwareFlags; mountedVolumes: string[]; nvram: Record<string, string>; bootSequence: number; audio: AudioState; systems: ShipSystemsState };
 type SessionSnapshot = { version: 1; savedAt: string; cwd: string; runtime: RuntimeState; history: string[]; focusPath: string; lines: TerminalLine[] };
 
-const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0 }, systems: createInitialShipSystems() };
+const initialRuntime: RuntimeState = { energy: 31, oxygen: 14, hull: 72, memory: 86, network: "FRAGMENTED", authority: "GUEST", credentials: [], services: [], installedApps: [], workspacePrograms: [], authenticatedUsers: [], failedLogins: {}, lockedUsers: [], recoveredPaths: [], boot: "RUNNING", firmware: { maintenancePort: false, ghostBus: false, cryo601: false, rootWrite: false, hiddenVolume: false, debugConsole: false }, mountedVolumes: ["/ship"], nvram: { BOOT_TARGET: "FALLBACK", POST: "FULL", DEBUG: "OFF" }, bootSequence: 0, audio: { status: "STOPPED", position: 0, lofi: false }, systems: createInitialShipSystems() };
 
 const clearanceRank: Record<RuntimeState["authority"], number> = { GUEST: 0, CREW: 1, OFFICER: 2, ROOT: 3 };
 const firmwareFlagMap: Record<string, keyof FirmwareFlags> = { MAINTENANCE_PORT: "maintenancePort", GHOST_BUS: "ghostBus", CRYO_601: "cryo601", ROOT_WRITE: "rootWrite", HIDDEN_VOLUME: "hiddenVolume", DEBUG_CONSOLE: "debugConsole" };
@@ -178,6 +179,7 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
         title: runtime.audio?.title ?? audioPayload?.title,
         artist: runtime.audio?.artist ?? audioPayload?.artist,
         duration: runtime.audio?.duration ?? audioPayload?.duration,
+        lofi: Boolean(runtime.audio?.lofi),
       },
     },
     history: Array.isArray(snapshot.history) ? snapshot.history.filter((entry): entry is string => typeof entry === "string").slice(-80) : [],
@@ -261,6 +263,7 @@ function helpLines(): TerminalLine[] {
     { text: "PLAY <file.MUS>       attach a music container to /dev/audio0", tone: "amber" },
     { text: "PAUSE / RESUME        control the active audio process", tone: "amber" },
     { text: "STOP                  terminate the active audio process", tone: "amber" },
+    { text: "LOFI                  toggle low-fidelity audio processing", tone: "amber" },
     { text: "AUDIO / PLAYER        inspect audio process and device state", tone: "output" },
     { text: "RUN / EXEC / START    execute a .PROC program", tone: "amber" },
     { text: "EDIT <path>            open or modify a Seed Script workspace", tone: "amber" },
@@ -458,12 +461,17 @@ function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: Runtime
     const hasAccount = Boolean(target.access && runtime.authenticatedUsers.includes(target.access.username));
     if (!hasClearance && !hasAccount) return result([{ text: `play: permission denied :: required ${target.clearance}`, tone: "error" }]);
     if (target.integrity === "CORRUPTED" && !runtime.recoveredPaths.includes(target.path)) return result([{ text: `play: container unreadable :: ${target.path}`, tone: "error" }]);
-    const audio: AudioState = { path: target.path, source: target.payload.mediaSrc, title: target.payload.title ?? target.name, artist: target.payload.artist, duration: target.payload.duration, status: target.payload.mediaSrc ? "PLAYING" : "SOURCE_MISSING", position: 0 };
-    return result([{ text: `AUDIO OPEN :: ${target.path}`, tone: "system" }, { text: `DEVICE     :: /dev/audio0`, tone: "output" }, { text: `CONTAINER  :: ${target.payload.codec ?? "SEED-AUDIO"}`, tone: "dim" }, { text: target.payload.mediaSrc ? `PLAYBACK   :: ${audio.title ?? "UNNAMED"}` : "SOURCE    :: NOT MOUNTED / metadata only", tone: target.payload.mediaSrc ? "amber" : "dim" }], { nextRuntime: { ...runtime, audio } });
+    const audio: AudioState = { path: target.path, source: target.payload.mediaSrc, title: target.payload.title ?? target.name, artist: target.payload.artist, duration: target.payload.duration, status: target.payload.remoteEmbed ? "REMOTE" : target.payload.mediaSrc ? "PLAYING" : "SOURCE_MISSING", position: 0, lofi: false };
+    return result([{ text: `AUDIO OPEN :: ${target.path}`, tone: "system" }, { text: `DEVICE     :: /dev/audio0`, tone: "output" }, { text: `CONTAINER  :: ${target.payload.codec ?? "SEED-AUDIO"}`, tone: "dim" }, { text: target.payload.remoteEmbed ? "PLAYBACK   :: REMOTE CONTAINER / PRIVATE CHANNEL" : target.payload.mediaSrc ? `PLAYBACK   :: ${audio.title ?? "UNNAMED"}` : "SOURCE    :: NOT MOUNTED / metadata only", tone: target.payload.remoteEmbed || target.payload.mediaSrc ? "amber" : "dim" }], { nextRuntime: { ...runtime, audio } });
+  }
+  if (normalized === "lofi") {
+    if (!runtime.audio.path) return result([{ text: "lofi: no active audio process", tone: "error" }]);
+    const lofi = !runtime.audio.lofi;
+    return result([{ text: `LO-FI FILTER :: ${lofi ? "ENGAGED" : "BYPASSED"}`, tone: lofi ? "amber" : "output" }], { nextRuntime: { ...runtime, audio: { ...runtime.audio, lofi } } });
   }
   if (["pause", "resume", "stop"].includes(normalized)) {
     if (!runtime.audio.path) return result([{ text: `audio: no active process :: ${normalized}`, tone: "error" }]);
-    const status: AudioState["status"] = normalized === "pause" ? "PAUSED" : normalized === "stop" ? "STOPPED" : runtime.audio.source ? "PLAYING" : "SOURCE_MISSING";
+    const status: AudioState["status"] = normalized === "pause" ? "PAUSED" : normalized === "stop" ? "STOPPED" : runtime.audio.source ? "PLAYING" : runtime.audio.status === "REMOTE" ? "REMOTE" : "SOURCE_MISSING";
     return result([{ text: `AUDIO ${normalized.toUpperCase()} :: ${runtime.audio.path}`, tone: normalized === "stop" ? "dim" : "amber" }], { nextRuntime: { ...runtime, audio: { ...runtime.audio, status, ...(normalized === "stop" ? { position: 0 } : {}) } } });
   }
   if (normalized === "sudo") return result([{ text: "sudo: clearance required :: request denied", tone: "error" }]);
@@ -600,6 +608,7 @@ export default function Home() {
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [focusPath, setFocusPath] = useState("/BOOT.ATA");
+  const [nanoPanels, setNanoPanels] = useState<NanoPanel[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -668,7 +677,7 @@ export default function Home() {
   useEffect(() => {
     const element = audioRef.current;
     if (!element) return;
-    if (!bootComplete || !runtime.audio.source || !runtime.audio.path) { element.pause(); return; }
+    if (!bootComplete || !runtime.audio.source || !runtime.audio.path || runtime.audio.status === "REMOTE") { element.pause(); return; }
     if (element.dataset.path !== runtime.audio.path) { element.src = runtime.audio.source; element.dataset.path = runtime.audio.path; element.currentTime = runtime.audio.position; }
     if (runtime.audio.status === "PLAYING") void element.play().catch(() => undefined);
     else element.pause();
@@ -685,7 +694,20 @@ export default function Home() {
     setHistory((current) => [...current.filter((entry) => entry !== raw), raw].slice(-80));
     setHistoryIndex(-1);
     setCommand("");
+    const [verb, ...args] = raw.split(/\s+/);
+    if (["run", "exec", "start"].includes(verb.toLowerCase())) {
+      const app = resolveAppFile(runtimeIndex, args.join(" "), cwd);
+      if (app?.extension === ".PROC") openNanoPanel(app.path);
+    }
   };
+
+  const openNanoPanel = (path: string) => {
+    setNanoPanels((current) => pushNanoPanel(current, path));
+    setFocusPath(path);
+  };
+  const closePanel = (path: string) => setNanoPanels((current) => closeNanoPanel(current, path));
+  const togglePanel = (path: string) => setNanoPanels((current) => toggleNanoPanel(current, path));
+  const focusPanel = (path: string) => { setNanoPanels((current) => focusNanoPanel(current, path)); setFocusPath(path); };
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
@@ -762,12 +784,18 @@ export default function Home() {
           <div className="lens-links-title">RELATION TRACES // {String(visibleLinks.length).padStart(2, "0")}</div>
           <div className="lens-links">{visibleLinks.length ? visibleLinks.map((link) => <button type="button" className={`trace-link signal-${link.signal ?? "clear"}`} key={`${link.label}-${link.target}`} onClick={() => traceLink(link.target)}><span>{link.relation}</span><strong>{link.label}</strong><small>{link.target}</small></button>) : <div className="trace-empty">No related traces indexed for this record.</div>}</div>
         </> : <div className="lens-empty">No VFS object is fixed to this lens. Select a trace from the Matter Index.</div>}
+        <div className="nano-stack-title"><span>ACTIVE INSTRUMENTS</span><b>{String(nanoPanels.length).padStart(2, "0")}</b></div>
+        <div className="nano-panel-stack">{nanoPanels.length ? visibleNanoPanels(nanoPanels).map((panel, indexPanel) => { const file = runtimeIndex.fileMap.get(panel.path.toLowerCase()); const isTop = indexPanel === 0; const code = file?.payload.kind === "program" ? file.payload.code.slice(0, 3) : []; return <article key={panel.path} className={`nano-panel ${isTop ? "is-top" : ""} ${panel.collapsed ? "is-collapsed" : ""}`}>
+          <div className="nano-panel-head"><span className="nano-panel-index">{String(nanoPanels.length - indexPanel).padStart(2, "0")}</span><strong>{file?.name ?? panel.path}</strong><span className="nano-panel-state">{nanoPanelStatus(panel, indexPanel)}</span></div>
+          <div className="nano-panel-path">{panel.path}</div>
+          {!panel.collapsed && <div className="nano-panel-body"><div className="nano-panel-code">{code.length ? code.map((line, codeIndex) => <code key={`${codeIndex}-${line}`}>{line}</code>) : <span>PROCESS BUFFER ATTACHED</span>}</div><div className="nano-panel-actions"><button type="button" onClick={() => focusPanel(panel.path)}>FOCUS</button><button type="button" onClick={() => togglePanel(panel.path)}>PARK</button><button type="button" className="nano-close" onClick={() => closePanel(panel.path)}>CUT</button></div></div>}
+        </article>; }) : <div className="nano-empty">NO ACTIVE PROCESS<br /><span>RUN A .PROC TO ATTACH AN INSTRUMENT</span></div>}</div>
       </aside>
     </section>
     <section className="instrument-rail" aria-label="Seed OS instruments">
       <div className="rail-label"><span>INSTRUMENT BUS</span><b>LOCAL</b></div>
-      <div className="audio-instrument"><span className="instrument-glyph">≋</span><div><strong>{runtime.audio.title ?? "AUDIO CHANNEL / IDLE"}</strong><small>{runtime.audio.path ?? "No .MUS container attached to /dev/audio0"}</small></div><span className={`audio-state state-${runtime.audio.status.toLowerCase()}`}>{runtime.audio.status}</span>{runtime.audio.path && <button type="button" onClick={() => executeCommand(runtime.audio.status === "PLAYING" ? "PAUSE" : "RESUME")}>{runtime.audio.status === "PLAYING" ? "HOLD" : "FLOW"}</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("STOP")}>CUT</button>}</div>
-      <div className="app-instruments">{appFiles.length ? appFiles.map((app) => <button type="button" key={app.path} className="app-instrument" onClick={() => executeCommand(`RUN ${app.path}`)}><span>◫</span><strong>{app.name.replace(".PROC", "")}</strong><small>RUN</small></button>) : <span className="app-absence">NO REGISTERED .PROC INSTRUMENTS</span>}</div>
+      <div className="audio-instrument"><span className="instrument-glyph">≋</span><div><strong>{runtime.audio.title ?? "AUDIO CHANNEL / IDLE"}</strong><small>{runtime.audio.path ?? "No .MUS container attached to /dev/audio0"}</small></div><span className={`audio-state state-${runtime.audio.status.toLowerCase()}`}>{runtime.audio.status}</span>{runtime.audio.path && <button type="button" onClick={() => executeCommand(runtime.audio.status === "PLAYING" ? "PAUSE" : "RESUME")}>{runtime.audio.status === "PLAYING" ? "HOLD" : "FLOW"}</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("STOP")}>CUT</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("LOFI")}>{runtime.audio.lofi ? "RAW" : "LO-FI"}</button>}{runtime.audio.status === "REMOTE" && <span className="remote-audio-note">REMOTE CHANNEL / MASKED</span>}</div>{runtime.audio.status === "REMOTE" && runtime.audio.path && (() => { const remote = runtimeIndex.fileMap.get(runtime.audio.path.toLowerCase())?.payload; return remote?.kind === "audio" && remote.remoteEmbed ? <iframe className="remote-audio-frame" title="Seed OS remote audio channel" src={remote.remoteEmbed} allow="autoplay; encrypted-media" /> : null; })()}
+      <div className="app-instruments">{appFiles.length ? appFiles.map((app) => <button type="button" key={app.path} className="app-instrument" onClick={() => executeCommand(`RUN ${app.path}`)}><span>◫</span><strong>{app.name.replace(".PROC", "")}</strong><small>ATTACH</small></button>) : <span className="app-absence">NO REGISTERED .PROC INSTRUMENTS</span>}</div>
     </section>
     <audio ref={audioRef} preload="metadata" aria-label="Seed OS audio device" />
     <footer className="terminal-footer"><span>SEED OS v0.9.1</span><span>{runtime.boot} / {runtime.network}</span><span>AUDIO: {runtime.audio.status}</span><span>{activeFile?.extension ?? ".SYS"} // {runtime.authority}</span></footer>

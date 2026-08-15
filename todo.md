@@ -167,3 +167,31 @@
 - [ ] Corrigir links narrativos para garantir que cada arquivo citado exista e que as relações familiares formem uma rede navegável.
 - [ ] Testar os comandos de busca por pessoa, família, idioma, nacionalidade e caminho corporativo.
 - [ ] Validar a nova contagem de arquivos, a tela responsiva e o build antes de salvar o próximo checkpoint.
+
+
+## Player remoto e playlist de teste
+
+- [x] Definir manifesto `.MUS` remoto com URL pública, identificadores técnicos, faixa, ordem e estado sem expor metadados externos na interface.
+- [x] Instalar uma playlist de teste no diretório de `passenger-014`, preservando a descoberta pelo VFS e a autoridade das permissões existentes.
+- [x] Implementar player remoto no nano painel direito com estados `REMOTE`, `BUFFERING`, `PLAYING`, `PAUSED`, `BLOCKED` e `SOURCE_UNAVAILABLE`.
+- [x] Implementar modo LO-FI visual e sonoro quando tecnicamente possível, sem alterar a fonte remota nem baixar o áudio.
+- [x] Integrar reprodução, pausa, retomada, parada, faixa anterior/próxima e consulta de estado aos comandos atuais do Seed OS.
+- [x] Persistir somente manifesto, faixa, posição aproximada, volume, modo LO-FI e estado necessário; nunca persistir bytes de áudio.
+- [x] Testar a abertura da playlist a partir de `passenger-014` e registrar limitações de autoplay, embed, disponibilidade e origem remota.
+- [x] Corrigir o erro local de `dotenv` antes da validação final do player.
+- [ ] Salvar checkpoint do player remoto após `pnpm check`, build, testes e validação visual.
+
+## Registro técnico do player remoto
+
+- [x] Manter a URL pública apenas como referência técnica não exibida no painel diegético.
+- [x] Não baixar, reempacotar ou redistribuir áudio da fonte externa.
+- [x] Exibir ao jogador apenas a identidade ficcional do arquivo `.MUS`, conforme o manifesto do passageiro.
+- [x] Tratar indisponibilidade da fonte como comportamento normal de rede do Seed OS.
+- [x] Não usar backend, banco ou autenticação para o player local/remoto.
+
+## Próxima ação
+
+- [x] Integrar o manifesto de playlist em `passenger-014`.
+- [x] Implementar o nano painel do player.
+- [ ] Validar manualmente a reprodução e o modo LO-FI após `AUTH I.CHEN` e `PLAY playlist.MUS`.
+- [ ] Criar checkpoint final.
