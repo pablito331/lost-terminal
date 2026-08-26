@@ -273,3 +273,10 @@
 - [x] Auditar contradições narrativas intencionais de versões, permissões e apagamentos, distinguindo-as de inconsistências acidentais de cadastro ou cronologia.
 - [x] Reexecutar testes, TypeScript, auditorias, build e revisão visual após as alterações; a validação manual do áudio remoto foi concluída com gesto diegético no navegador e registrada em `validation-audio-2026-08-15.md`.
 - [x] Confirmar se a página inicial e os principais comandos permanecem integralmente diegéticos após a inclusão dos indicadores contextuais.
+
+## Retentativa de exportação e revisão do player — iteração atual
+
+- [x] Repetir o envio ao GitHub usando apenas a autorização já concedida, sem nova intervenção do usuário, e registrar o resultado exato: o canal configurado nesta sandbox resolve para um remoto interno sem credencial de terminal (`terminal prompts disabled`), portanto não foi possível alcançar o GitHub diretamente nesta tentativa.
+- [x] Inspecionar a implementação, o fluxo no navegador e os logs do player `.MUS` para identificar por que ele ainda não estava adequado.
+- [x] Corrigir controles, estados, reprodução nativa e ocultação de origem externa no player Seed OS, com testes específicos: `PLAY` agora apenas arma o canal e `FLOW` inicia a saída sob gesto nativo; sessões legadas `REMOTE` migram para `PAUSED`.
+- [x] Validar o player corrigido em navegador, TypeScript, Vitest, build e auditorias antes de criar um checkpoint: `FLOW` confirmou `paused: false`, `readyState: 4`, progresso de reprodução, `controls: false` e `iframe` ausente; 41 testes, TypeScript, build, coerência, ecossistema e matriz passaram.

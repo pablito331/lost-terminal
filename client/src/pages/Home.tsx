@@ -11,6 +11,7 @@ import { createInitialShipSystems, repairGenerator, repairLifeSupport, ShipSyste
 import { compileSeedScript, runSeedScript, SeedScriptEffects } from "@/lib/seedScript";
 import { closeNanoPanel, focusNanoPanel, nanoPanelStatus, pushNanoPanel, toggleNanoPanel, visibleNanoPanels, NanoPanel } from "@/lib/nanoPanels";
 import { configureLofiGraph } from "@/lib/audioPipeline";
+import { resolveAudioSource } from "@/lib/audioSource";
 import { searchSeedFiles, terminalIdentityLine } from "@/lib/seedAudit";
 import { translateSeedFile } from "@/lib/seedTranslator";
 import { crashSeedProcess, processCanUse, SeedProcess, spawnSeedProcess, stopSeedProcess, validateProcessSpec } from "@/lib/seedProcess";
@@ -195,6 +196,7 @@ function restoreSnapshot(snapshot: SessionSnapshot | null, index: SeedIndex): Se
         title: runtime.audio?.title ?? audioPayload?.title,
         artist: runtime.audio?.artist ?? audioPayload?.artist,
         duration: runtime.audio?.duration ?? audioPayload?.duration,
+        status: runtime.audio?.status === "REMOTE" && audioPayload?.mediaSrc ? "PAUSED" : runtime.audio?.status ?? initialRuntime.audio.status,
         lofi: true,
       },
     },
@@ -474,8 +476,9 @@ export function runCommand(raw: string, cwd: string, index: SeedIndex, runtime: 
     const hasAccount = Boolean(target.access && runtime.authenticatedUsers.includes(target.access.username));
     if (!hasClearance && !hasAccount) return result([{ text: `play: permission denied :: required ${target.clearance}`, tone: "error" }]);
     if (target.integrity === "CORRUPTED" && !runtime.recoveredPaths.includes(target.path)) return result([{ text: `play: container unreadable :: ${target.path}`, tone: "error" }]);
-    const audio: AudioState = { path: target.path, source: target.payload.mediaSrc, title: target.payload.title ?? target.name, artist: target.payload.artist, duration: target.payload.duration, status: target.payload.remoteProvider ? "REMOTE" : target.payload.mediaSrc ? "PLAYING" : "SOURCE_MISSING", position: 0, lofi: true };
-    return result([{ text: `AUDIO OPEN :: ${target.path}`, tone: "system" }, { text: `DEVICE     :: /dev/audio0`, tone: "output" }, { text: `CONTAINER  :: ${target.payload.codec ?? "SEED-AUDIO"}`, tone: "dim" }, { text: target.payload.remoteProvider ? "PLAYBACK   :: DIRECT CHANNEL / PRIVATE CHANNEL" : target.payload.mediaSrc ? `PLAYBACK   :: ${audio.title ?? "UNNAMED"}` : "SOURCE    :: NOT MOUNTED / metadata only", tone: target.payload.remoteProvider || target.payload.mediaSrc ? "amber" : "dim" }], { nextRuntime: { ...runtime, audio } });
+    const sourceMode = resolveAudioSource(target.payload);
+    const audio: AudioState = { path: target.path, source: target.payload.mediaSrc, title: target.payload.title ?? target.name, artist: target.payload.artist, duration: target.payload.duration, status: sourceMode === "SOURCE_MISSING" ? "SOURCE_MISSING" : "PAUSED", position: 0, lofi: true };
+    return result([{ text: `AUDIO OPEN :: ${target.path}`, tone: "system" }, { text: `DEVICE     :: /dev/audio0`, tone: "output" }, { text: `CONTAINER  :: ${target.payload.codec ?? "SEED-AUDIO"}`, tone: "dim" }, { text: sourceMode === "DIRECT_REMOTE" ? "PLAYBACK   :: DIRECT CHANNEL / MASKED" : sourceMode === "LOCAL" ? `PLAYBACK   :: ${audio.title ?? "UNNAMED"}` : "SOURCE    :: NOT MOUNTED / metadata only", tone: sourceMode === "SOURCE_MISSING" ? "dim" : "amber" }, ...(sourceMode === "SOURCE_MISSING" ? [] : [{ text: "BUFFER     :: ARMED / invoke FLOW for native output", tone: "dim" as Tone }])], { nextRuntime: { ...runtime, audio } });
   }
   if (["pause", "resume", "stop"].includes(normalized)) {
     if (!runtime.audio.path) return result([{ text: `audio: no active process :: ${normalized}`, tone: "error" }]);
@@ -740,7 +743,7 @@ export default function Home() {
   useEffect(() => {
     const element = audioRef.current;
     if (!element) return;
-    if (!bootComplete || !runtime.audio.source || !runtime.audio.path || runtime.audio.status === "REMOTE") {
+    if (!bootComplete || !runtime.audio.source || !runtime.audio.path || runtime.audio.status === "SOURCE_MISSING") {
       element.pause();
       return;
     }
@@ -833,6 +836,29 @@ export default function Home() {
   const closePanel = (path: string) => setNanoPanels((current) => closeNanoPanel(current, path));
   const togglePanel = (path: string) => setNanoPanels((current) => toggleNanoPanel(current, path));
   const focusPanel = (path: string) => { setNanoPanels((current) => focusNanoPanel(current, path)); setFocusPath(path); };
+  const flowAudio = () => {
+    if (runtime.audio.status === "PLAYING") {
+      audioRef.current?.pause();
+      executeCommand("PAUSE");
+      return;
+    }
+    const element = audioRef.current;
+    if (!runtime.audio.path || !runtime.audio.source || !element) {
+      executeCommand("RESUME");
+      return;
+    }
+    if (element.dataset.path !== runtime.audio.path) {
+      element.src = runtime.audio.source;
+      element.dataset.path = runtime.audio.path;
+      element.currentTime = runtime.audio.position;
+    }
+    const graphContext = audioGraphRef.current?.context;
+    if (graphContext?.state === "suspended") void graphContext.resume();
+    void element.play().then(() => executeCommand("RESUME")).catch(() => {
+      setRuntime((current) => ({ ...current, audio: { ...current.audio, status: "PAUSED" } }));
+      setLines((current) => [...current, { text: "audio: native output gate retained // invoke FLOW after channel readiness", tone: "amber" }]);
+    });
+  };
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
@@ -849,6 +875,7 @@ export default function Home() {
   const directoryEntries = useMemo(() => listDirectory(runtimeIndex, cwd), [runtimeIndex, cwd]);
   const appFiles = useMemo(() => runtimeIndex.files.filter((file) => file.directory === "/apps" && file.extension === ".PROC").slice(0, 5), [runtimeIndex]);
   const visibleLinks = activeFile?.links.slice(0, 6) ?? [];
+  const audioUsesDirectChannel = Boolean(runtime.audio.source && /^https?:\/\//i.test(runtime.audio.source));
   const selectedReadable = activeFile ? clearanceRank[runtime.authority] >= clearanceRank[activeFile.clearance] || Boolean(activeFile.access && runtime.authenticatedUsers.includes(activeFile.access.username)) : false;
   const activeCrew = useMemo(() => activeFile?.ownerId ? runtimeIndex.crew.find((member) => member.id === activeFile.ownerId) : undefined, [activeFile, runtimeIndex]);
   const inspectEntry = (entry: ReturnType<typeof listDirectory>[number]) => {
@@ -922,10 +949,10 @@ export default function Home() {
     </section>
     <section className="instrument-rail" aria-label="Seed OS instruments">
       <div className="rail-label"><span>INSTRUMENT BUS</span><b>LOCAL</b></div>
-      <div className="audio-instrument"><span className="instrument-glyph">≋</span><div><strong>{runtime.audio.title ?? "AUDIO CHANNEL / IDLE"}</strong><small>{runtime.audio.path ?? "No .MUS container attached to /dev/audio0"}</small></div><span className={`audio-state state-${runtime.audio.status.toLowerCase()}`}>{runtime.audio.status}</span>{runtime.audio.path && <button type="button" onClick={() => executeCommand(runtime.audio.status === "PLAYING" ? "PAUSE" : "RESUME")}>{runtime.audio.status === "PLAYING" ? "HOLD" : "FLOW"}</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("STOP")}>CUT</button>}{runtime.audio.status === "REMOTE" && <span className="remote-audio-note">REMOTE CHANNEL / MASKED</span>}</div>{runtime.audio.status === "REMOTE" && runtime.audio.path && <span className="remote-audio-note">DIRECT CHANNEL / MASKED</span>}
+      <div className="audio-instrument"><span className="instrument-glyph">≋</span><div><strong>{runtime.audio.title ?? "AUDIO CHANNEL / IDLE"}</strong><small>{runtime.audio.path ?? "No .MUS container attached to /dev/audio0"}</small></div><span className={`audio-state ${audioUsesDirectChannel ? "state-remote" : `state-${runtime.audio.status.toLowerCase()}`}`}>{runtime.audio.status}</span>{runtime.audio.path && <button type="button" onClick={flowAudio} disabled={runtime.audio.status === "SOURCE_MISSING"}>{runtime.audio.status === "PLAYING" ? "HOLD" : "FLOW"}</button>}{runtime.audio.path && <button type="button" onClick={() => executeCommand("STOP")}>CUT</button>}{audioUsesDirectChannel && <span className="remote-audio-note">DIRECT CHANNEL / MASKED</span>}</div>
       <div className="app-instruments">{appFiles.length ? appFiles.map((app) => <button type="button" key={app.path} className="app-instrument" onClick={() => executeCommand(`RUN ${app.path}`)}><span>◫</span><strong>{app.name.replace(".PROC", "")}</strong><small>ATTACH</small></button>) : <span className="app-absence">NO REGISTERED .PROC INSTRUMENTS</span>}</div>
     </section>
-    <audio ref={audioRef} preload="metadata" aria-label="Seed OS audio device" />
+    <audio ref={audioRef} preload="metadata" aria-label="Seed OS audio device" onEnded={() => setRuntime((current) => ({ ...current, audio: { ...current.audio, status: "STOPPED", position: 0 } }))} />
     <footer className="terminal-footer"><span>SEED OS v0.9.1</span><span>{runtime.boot} / {runtime.network}</span><span>AUDIO: {runtime.audio.status}</span><span>{activeFile?.extension ?? ".SYS"} // {runtime.authority}</span></footer>
   </main>;
 }

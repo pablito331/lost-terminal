@@ -31,7 +31,12 @@ const requirements = [
   ["GUEST_BOOTSTRAP", seedData.includes("passenger-014") && seedData.includes("TIDAL-04")],
   ["BOOK_PAGINATION", home.includes("renderBookPage") && home.includes("BOOK <path> <page 1-") && manual.includes("BOOK")],
   ["SESSION_WARNING", manual.includes("Limpar os dados do site") && manual.includes("janela privada")],
-  ["REMOTE_AUDIO_MASK", home.includes("REMOTE CHANNEL / MASKED") && !home.includes("<iframe")],
+  [
+    "REMOTE_AUDIO_MASK",
+    home.includes("DIRECT CHANNEL / MASKED")
+      && !home.includes("<iframe")
+      && !home.includes("suno.com/playlist"),
+  ],
   ["SOURCE_POLICY", sourcePolicy.includes("DIRECT_REMOTE") && sourcePolicy.includes("LOCAL") && sourcePolicy.includes("SOURCE_MISSING")],
   ["MUS_MANIFEST", seedData.includes("playlist.MUS") && seedData.includes("passenger-014")],
 ] as const;
