@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build:pages": "VITE_BASE_PATH=/lost-terminal/ vite build && cp dist/public/index.html dist/public/404.html",
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
+    "test": "vitest run",
+    "audit:ecosystem": "tsx scripts/verify-seed-ecosystem.ts",
+    "audit:coherence": "tsx scripts/verify-seed-terminal-coherence.ts",
+    "audit:commands": "tsx scripts/verify-seed-command-matrix.ts",
     "format": "prettier --write ."
   },
   "dependencies": {
